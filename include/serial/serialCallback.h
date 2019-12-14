@@ -1,24 +1,22 @@
 #ifndef __SERIAL_CALLBACK_H__
 #define __SERIAL_CALLBACK_H__
 
-#include <Arduino.h>
-
 class SerialCallback {
    protected:
-    char command;
-    String help;
+    const char* command;
+    const char* help;
 
    public:
-    virtual bool commandCallback(void) = 0;
+    virtual bool commandCallback(const char*) = 0;
 
-    SerialCallback(char command, String help) {
+    SerialCallback(const char* command, const char* help) {
         this->command = command;
         this->help = help;
     };
 
-    char getCommand() { return command; }
-    
-    String getHelp() { return help; }
+    const char* getCommand() { return command; }
+
+    const char* getHelp() { return help; }
 };
 
 #endif  // __SERIAL_CALLBACK_H__

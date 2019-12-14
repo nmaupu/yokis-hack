@@ -1,11 +1,13 @@
 #include "serial/usageCallback.h"
 
-UsageCallback::UsageCallback(char c, String h, SerialHelper* serialHelper) : SerialCallback(c, h) {
+UsageCallback::UsageCallback(const char* command, const char* help, SerialHelper* serialHelper)
+    : SerialCallback(command, help) {
     this->serialHelper = serialHelper;
 }
 
-bool UsageCallback::commandCallback() {
+bool UsageCallback::commandCallback(const char* params) {
     this->serialHelper->usage();
+    Serial.println();
     SerialHelper::displayConfig();
     return true;
 }

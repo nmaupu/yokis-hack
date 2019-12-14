@@ -1,14 +1,13 @@
 #ifndef __DEBUG_FLAG_CALLBACK_H
 #define __DEBUG_FLAG_CALLBACK_H
 
-#include <Arduino.h>
 #include "serial/serialCallback.h"
 
 class DebugFlagCallback : public SerialCallback {
    public:
-    DebugFlagCallback(char, String);
+    DebugFlagCallback(const char*, const char*);
 
-    bool commandCallback();
+    bool commandCallback(const char*);
 };
 
 #endif  // __DEBUG_FLAG_CALLBACK_H

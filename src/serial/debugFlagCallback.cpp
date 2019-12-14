@@ -2,9 +2,10 @@
 #include "globals.h"
 #include "serial/serialHelper.h"
 
-DebugFlagCallback::DebugFlagCallback(char c, String h) : SerialCallback(c, h) {}
+DebugFlagCallback::DebugFlagCallback(const char* command, const char* help)
+    : SerialCallback(command, help) {}
 
-bool DebugFlagCallback::commandCallback() {
+bool DebugFlagCallback::commandCallback(const char* params) {
     FLAG_TOGGLE(FLAG_DEBUG);
     SerialHelper::displayConfig();
     return true;
