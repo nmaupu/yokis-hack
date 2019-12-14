@@ -24,6 +24,8 @@ extern byte ConfigFlags;
 
 // test if a flag is enabled
 #define FLAG_IS_ENABLED(f) ( ((ConfigFlags) & (f)) > 0 )
+// test if debug flag is enabled
+#define IS_DEBUG_ENABLED (FLAG_IS_ENABLED(FLAG_DEBUG))
 // enable a config flag
 #define FLAG_ENABLE(f) ( (ConfigFlags) |= (f) )
 // disable a config flag

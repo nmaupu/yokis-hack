@@ -49,7 +49,7 @@ bool RF::hackPairing() {
     unsigned long now = millis();
     unsigned long timeout = now + HACK_TIMEOUT;
 
-    if (!FLAG_IS_ENABLED(FLAG_RAW) || FLAG_IS_ENABLED(FLAG_DEBUG)) {
+    if (!FLAG_IS_ENABLED(FLAG_RAW) || IS_DEBUG_ENABLED) {
         Serial.println("Hack started, click on the connect button when ready");
     }
 
@@ -57,7 +57,7 @@ bool RF::hackPairing() {
     this->setupRFModule();
     this->prepareForReading(3);
 
-    if (FLAG_IS_ENABLED(FLAG_DEBUG)) {
+    if (IS_DEBUG_ENABLED) {
         this->printDetails();
     }
 
@@ -96,7 +96,7 @@ bool RF::hackPairing() {
 }
 
 void RF::_debugPrintRecv(byte* recvBuf, uint8_t s) {
-    if (!FLAG_IS_ENABLED(FLAG_DEBUG)) return;
+    if (!IS_DEBUG_ENABLED) return;
 
     Serial.print("Received data: ");
     for (uint8_t i = 0; i < s; i++) {

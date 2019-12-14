@@ -41,7 +41,7 @@ void SerialHelper::readFromSerial(void) {
 bool SerialHelper::displayConfig(void) {
     Serial.print("Config:");
     Serial.print(" DEBUG=");
-    Serial.print(FLAG_IS_ENABLED(FLAG_DEBUG));
+    Serial.print(IS_DEBUG_ENABLED);
     Serial.print(" RAW=");
     Serial.print(FLAG_IS_ENABLED(FLAG_RAW));
     Serial.println();
