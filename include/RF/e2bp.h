@@ -27,7 +27,6 @@ class E2bp : public RFConfigurator {
     uint8_t counter = 0;
     // Constructor
     E2bp(uint16_t, uint16_t);
-    E2bp(uint16_t, uint16_t, Device*);
     ~E2bp();
     bool sendPayload(const uint8_t*);
     void stopMainLoop();
@@ -40,8 +39,8 @@ class E2bp : public RFConfigurator {
     void interruptTxFailed() override;
 
     // Getters / setters
-    void setDevice(Device*);
-    Device* getDevice();
+    void setDevice(const Device*);
+    const Device* getDevice();
 };
 
 #endif  // __E2BP_H__

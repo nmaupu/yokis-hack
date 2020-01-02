@@ -10,7 +10,6 @@ class Scanner : public E2bp {
 
    public:
     Scanner(uint16_t, uint16_t);
-    Scanner(uint16_t, uint16_t, Device*);
     void setupRFModule() override;
     void interruptTxOk() override;
     void interruptRxReady() override;

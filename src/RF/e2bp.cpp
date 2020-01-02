@@ -5,14 +5,6 @@
 #define PAYLOAD_LENGTH 9
 #define MAIN_LOOP_TIMEOUT_MILLIS 200
 
-void printBinaryRepresentation(uint8_t byte, bool leadingZero);
-
-E2bp::E2bp(uint16_t cepin, uint16_t cspin, Device* device)
-    : RFConfigurator(cepin, cspin) {
-    this->device = device;
-    reset();
-}
-
 E2bp::E2bp(uint16_t cepin, uint16_t cspin) : RFConfigurator(cepin, cspin) {
     device = new Device("e2bp");
     this->firstPayloadStatus = UNDEFINED;
@@ -20,19 +12,20 @@ E2bp::E2bp(uint16_t cepin, uint16_t cspin) : RFConfigurator(cepin, cspin) {
 }
 
 E2bp::~E2bp() {
-    delete(device);
+    delete device;
 }
 
 void E2bp::reset() {
     this->firstPayloadStatus = UNDEFINED;
     this->secondPayloadStatus = UNDEFINED;
     this->loopContinue = true;
-    randomSeed(analogRead(0));  // initialize random generator with noise
 }
 
-void E2bp::setDevice(Device* device) { this->device = device; }
+void E2bp::setDevice(const Device* device) {
+    this->device->copy(device);
+}
 
-Device* E2bp::getDevice() { return this->device; }
+const Device* E2bp::getDevice() { return this->device; }
 
 bool E2bp::setDeviceStatus(DeviceStatus ds) {
     unsigned long timeout = millis() + 1000;
@@ -121,22 +114,29 @@ bool E2bp::sendPayload(const uint8_t* payload) {
 }
 
 void E2bp::setupRFModule() {
-    // uint8_t address[5] = {0xcc, 0x17, 0xcc, 0x17, 0x17};
-    // uint8_t channel = 0x29;
-
     begin();
-    write_register(RF_CH, device->getChannel());
-    write_register(RF_SETUP, 0b00100011);
-    write_register(RX_ADDR_P0, device->getHardwareAddress(), 5);
-    write_register(TX_ADDR, device->getHardwareAddress(), 5);
-    write_register(RX_PW_P0, 0x02);
-    write_register(EN_RXADDR, 1);
-    write_register(EN_AA, 0);
-    write_register(NRF_STATUS, 0b01110000);
-    write_register(SETUP_RETR, 0);
-    write_register(NRF_CONFIG, 0b00001110);
+    //write_register(RF_CH, device->getChannel());
+    setChannel(device->getChannel());
+    //write_register(RF_SETUP, 0b00100011);
+    setDataRate(RF24_250KBPS);
+    setPALevel(RF24_PA_LOW);
+    //write_register(RX_ADDR_P0, device->getHardwareAddress(), 5);
+    setAddressWidth(5);
+    openReadingPipe(0, device->getHardwareAddress());
+    //write_register(TX_ADDR, device->getHardwareAddress(), 5);
+    //openWritingPipe(device->getHardwareAddress());
+    //write_register(RX_PW_P0, 0x02);
+    setPayloadSize(0x02);
+    //write_register(EN_RXADDR, 1); // openreadingpipe set this already
+    //write_register(EN_AA, 0);
+    setAutoAck(false);
+    //write_register(NRF_STATUS, 0b01110000); // no need to do this
+    //write_register(SETUP_RETR, 0);
+    setRetries(0, 0);
+    //write_register(NRF_CONFIG, 0b00001110);
+    openWritingPipe(device->getHardwareAddress()); //set to TX mode
     delay(4);  // It's literally what I sniffed on the SPI
-    flush_rx();
+    //flush_rx(); // done when calling begin()
     if (IS_DEBUG_ENABLED) {
         printDetails();
     }

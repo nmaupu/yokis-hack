@@ -185,7 +185,7 @@ bool toggleCallback(const char* params) {
     }
 
     IrqManager::irqType = E2BP;
-    g_bp->getDevice()->copy(d);
+    g_bp->setDevice(d);
     return g_bp->toggle();
 }
 
@@ -198,7 +198,7 @@ bool onCallback(const char* params) {
     }
 
     IrqManager::irqType = E2BP;
-    g_bp->getDevice()->copy(d);
+    g_bp->setDevice(d);
     return g_bp->on();
 }
 
@@ -211,13 +211,13 @@ bool offCallback(const char* params) {
     }
 
     IrqManager::irqType = E2BP;
-    g_bp->getDevice()->copy(d);
+    g_bp->setDevice(d);
     return g_bp->off();
 }
 
 bool scannerCallback(const char*) {
     IrqManager::irqType = SCANNER;
-    g_scanner->getDevice()->copy(currentDevice);
+    g_scanner->setDevice(currentDevice);
     g_scanner->setupRFModule();
 
     return true;

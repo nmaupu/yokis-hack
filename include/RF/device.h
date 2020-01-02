@@ -21,8 +21,13 @@ class Device {
 #endif
 
    public:
+    // Create a device from another device
+    Device(const Device* device);
+    // Create a device with the given name
     Device(const char*);
+    // Create a device with a name and parameters
     Device(const char*, const uint8_t*, uint8_t);
+    // Unallocate memory used
     ~Device();
     const char* getDeviceName() const;
     void setDeviceName(const char*);

@@ -3,8 +3,6 @@
 #define BUFFER_MAX 9
 
 Scanner::Scanner(uint16_t cepin, uint16_t cspin) : E2bp(cepin, cspin) {}
-Scanner::Scanner(uint16_t cepin, uint16_t cspin, Device* device)
-    : E2bp(cepin, cspin, device){};
 
 void Scanner::setupRFModule() {
     if (getDevice() == NULL || getDevice()->getHardwareAddress() == NULL) return;

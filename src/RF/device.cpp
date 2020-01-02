@@ -5,6 +5,8 @@
 #include "globals.h"
 #include "utils.h"
 
+#define HARDWARE_ADDRESS_LENGTH 5
+
 #ifdef ESP8266
 // Configuration filename to store on SPIFFS when using ESP8266
 #define SPIFFS_CONFIG_FILENAME "/yokis.conf"
@@ -13,22 +15,22 @@
 #define SEP SPIFFS_CONFIG_SEP
 #endif
 
-Device::Device(const char* deviceName) {
+Device::Device(const char* dname) {
     this->deviceName = NULL;
-    this->setDeviceName(deviceName);
-    this->hardwareAddress = (uint8_t*)malloc(5 * sizeof(uint8_t));
+    this->setDeviceName(dname);
+    this->hardwareAddress =
+        (uint8_t*)malloc(HARDWARE_ADDRESS_LENGTH * sizeof(uint8_t));
     this->beginPacket = YOKIS_BEGIN_PACKET;
     this->endPacket = YOKIS_END_PACKET;
 }
 
-Device::Device(const char* deviceName, const uint8_t* hwAddr, uint8_t channel) {
-    this->deviceName = NULL;
-    this->setDeviceName(deviceName);
-    this->hardwareAddress = (uint8_t*)malloc(5 * sizeof(uint8_t));
+Device::Device(const Device* device) : Device(device->deviceName) {
+    this->copy(device);
+}
+
+Device::Device(const char* dname, const uint8_t* hwAddr, uint8_t channel) : Device(dname) {
     this->setHardwareAddress(hwAddr);
     this->setChannel(channel);
-    this->beginPacket = YOKIS_BEGIN_PACKET;
-    this->endPacket = YOKIS_END_PACKET;
 }
 
 Device::~Device() {
@@ -38,11 +40,10 @@ Device::~Device() {
 
 const char* Device::getDeviceName() const { return this->deviceName; }
 
-void Device::setDeviceName(const char* deviceName) {
-    if (deviceName != NULL) {
-        this->deviceName =
-            (char*)realloc(this->deviceName, strlen(deviceName) + 1);
-        strcpy(this->deviceName, deviceName);
+void Device::setDeviceName(const char* dname) {
+    if (dname != NULL) {
+        this->deviceName = (char*)realloc(this->deviceName, strlen(dname) + 1);
+        strcpy(this->deviceName, dname);
     }
 }
 
@@ -62,7 +63,7 @@ void Device::setEndPacket(uint8_t p) { this->endPacket = p; }
 
 void Device::setHardwareAddress(const uint8_t* hwAddr) {
     if (hwAddr != NULL) {
-        memcpy(this->hardwareAddress, hwAddr, 5);
+        memcpy(this->hardwareAddress, hwAddr, HARDWARE_ADDRESS_LENGTH);
     }
 }
 
@@ -212,6 +213,8 @@ void Device::loadFromSpiffs(Device** devices, const unsigned int size) {
 
         // Store this device
         devices[numLines++] = d;
+        Serial.print("Added new device: ");
+        Serial.println(d->getDeviceName());
     }
 
     f.close();
