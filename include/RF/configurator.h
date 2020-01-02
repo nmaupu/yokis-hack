@@ -1,7 +1,7 @@
 #ifndef __RF_CONFIGURATOR_H__
 #define __RF_CONFIGURATOR_H__
 
-#include <RF24.h>
+#include "RF/RF24_forked.h"
 
 #define DEFAULT_CE_PIN 7
 #define DEFAULT_CS_PIN 8

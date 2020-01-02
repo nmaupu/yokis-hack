@@ -2,18 +2,13 @@
 #include "globals.h"
 #include "utils.h"
 
-#define PAYLOAD_LENGTH 9
-#define MAIN_LOOP_TIMEOUT_MILLIS 200
-
 E2bp::E2bp(uint16_t cepin, uint16_t cspin) : RFConfigurator(cepin, cspin) {
     device = new Device("e2bp");
     this->firstPayloadStatus = UNDEFINED;
     this->secondPayloadStatus = UNDEFINED;
 }
 
-E2bp::~E2bp() {
-    delete device;
-}
+E2bp::~E2bp() { delete device; }
 
 void E2bp::reset() {
     this->firstPayloadStatus = UNDEFINED;
@@ -21,9 +16,7 @@ void E2bp::reset() {
     this->loopContinue = true;
 }
 
-void E2bp::setDevice(const Device* device) {
-    this->device->copy(device);
-}
+void E2bp::setDevice(const Device* device) { this->device->copy(device); }
 
 const Device* E2bp::getDevice() { return this->device; }
 
@@ -46,13 +39,9 @@ bool E2bp::setDeviceStatus(DeviceStatus ds) {
     return true;
 }
 
-bool E2bp::on() {
-    return setDeviceStatus(ON);
-}
+bool E2bp::on() { return setDeviceStatus(ON); }
 
-bool E2bp::off() {
-    return setDeviceStatus(OFF);
-}
+bool E2bp::off() { return setDeviceStatus(OFF); }
 
 bool E2bp::toggle() {
     uint8_t buf[9];
@@ -61,7 +50,7 @@ bool E2bp::toggle() {
 
     reset();
     setupRFModule();
-    while(millis() < timeout && firstPayloadStatus == secondPayloadStatus) {
+    while (millis() < timeout && firstPayloadStatus == secondPayloadStatus) {
         firstPayloadStatus = UNDEFINED;
         getFirstPayload(buf);
         sendPayload(buf);
@@ -115,28 +104,28 @@ bool E2bp::sendPayload(const uint8_t* payload) {
 
 void E2bp::setupRFModule() {
     begin();
-    //write_register(RF_CH, device->getChannel());
+    // write_register(RF_CH, device->getChannel());
     setChannel(device->getChannel());
-    //write_register(RF_SETUP, 0b00100011);
+    // write_register(RF_SETUP, 0b00100011);
     setDataRate(RF24_250KBPS);
     setPALevel(RF24_PA_LOW);
-    //write_register(RX_ADDR_P0, device->getHardwareAddress(), 5);
+    // write_register(RX_ADDR_P0, device->getHardwareAddress(), 5);
     setAddressWidth(5);
     openReadingPipe(0, device->getHardwareAddress());
-    //write_register(TX_ADDR, device->getHardwareAddress(), 5);
-    //openWritingPipe(device->getHardwareAddress());
-    //write_register(RX_PW_P0, 0x02);
+    // write_register(TX_ADDR, device->getHardwareAddress(), 5);
+    // openWritingPipe(device->getHardwareAddress());
+    // write_register(RX_PW_P0, 0x02);
     setPayloadSize(0x02);
-    //write_register(EN_RXADDR, 1); // openreadingpipe set this already
-    //write_register(EN_AA, 0);
+    // write_register(EN_RXADDR, 1); // openreadingpipe set this already
+    // write_register(EN_AA, 0);
     setAutoAck(false);
-    //write_register(NRF_STATUS, 0b01110000); // no need to do this
-    //write_register(SETUP_RETR, 0);
+    // write_register(NRF_STATUS, 0b01110000); // no need to do this
+    // write_register(SETUP_RETR, 0);
     setRetries(0, 0);
-    //write_register(NRF_CONFIG, 0b00001110);
-    openWritingPipe(device->getHardwareAddress()); //set to TX mode
+    // write_register(NRF_CONFIG, 0b00001110);
+    openWritingPipe(device->getHardwareAddress());  // set to TX mode
     delay(4);  // It's literally what I sniffed on the SPI
-    //flush_rx(); // done when calling begin()
+    // flush_rx(); // done when calling begin()
     if (IS_DEBUG_ENABLED) {
         printDetails();
     }
@@ -146,12 +135,14 @@ void E2bp::runMainLoop() {
     unsigned long timeout = millis() + MAIN_LOOP_TIMEOUT_MILLIS;
     uint8_t buf[2];
     ce(LOW);
-    while (loopContinue && millis() < timeout) {  // while not interrupted by RX or timeout
+    // while not interrupted by RX or timeout
+    while (loopContinue && millis() < timeout) {
         write_register(NRF_CONFIG, 0b00001110);  // PTX
         ce(HIGH);
         delayMicroseconds(15);
         ce(LOW);
         delayMicroseconds(685);
+
         write_register(NRF_CONFIG, 0b00001111);  // PRX
         ce(HIGH);
         write_register(NRF_STATUS, 0b01110000);  // Reset interrupts
@@ -178,9 +169,11 @@ void E2bp::runMainLoop() {
 void E2bp::setupPayload(const uint8_t* payload) {
     // Prepare everything to send continuously the given payload
     loopContinue = true;
-    setPayloadSize(9);
-    flush_tx();
-    write_payload(payload, PAYLOAD_LENGTH, W_TX_PAYLOAD);
+    setPayloadSize(PAYLOAD_LENGTH);
+    //flush_tx();
+    //write_payload(payload, PAYLOAD_LENGTH, W_TX_PAYLOAD);
+    memcpy(currentPayload, payload, PAYLOAD_LENGTH);
+    startFastWrite(currentPayload, PAYLOAD_LENGTH, false, false);
 }
 
 #if defined(ESP8266)

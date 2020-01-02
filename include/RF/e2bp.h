@@ -2,18 +2,24 @@
 #define __E2BP_H__
 
 #include <Arduino.h>
-#include <RF24.h>
 #include <nRF24L01.h>
 #include "RF/configurator.h"
 #include "RF/device.h"
+#include "RF/RF24_forked.h"
+
+#define PAYLOAD_LENGTH 9
+#define MAIN_LOOP_TIMEOUT_MILLIS 200
 
 enum DeviceStatus { OFF, ON, UNDEFINED };
 
+// Very low level class to control a Yokis device just like a e2bp remote
 class E2bp : public RFConfigurator {
    private:
     Device* device;
     bool loopContinue;
     DeviceStatus firstPayloadStatus, secondPayloadStatus;
+    char currentPayload[PAYLOAD_LENGTH];
+
     bool setDeviceStatus(DeviceStatus);
     void reset();
     void getFirstPayload(uint8_t *);
