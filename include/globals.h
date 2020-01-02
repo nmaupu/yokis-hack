@@ -64,8 +64,6 @@ extern Mqtt* g_mqtt;
 // toggle a config flag
 #define FLAG_TOGGLE(f) (FLAG_IS_ENABLED(f) ? FLAG_DISABLE(f) : FLAG_ENABLE(f))
 
-#define MQTT_TOPIC_COMMAND "cmnd"
-
 #define YOKIS_BEGIN_PACKET 0x35
 #define YOKIS_END_PACKET 0x53
 

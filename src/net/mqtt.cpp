@@ -14,13 +14,13 @@ Mqtt::Mqtt(WiFiClient& wifiClient, const char* host, const uint16_t* port,
 
     // Init subscriptions to NULL
     subscribedTopicIdx = 0;
-    for (uint8_t i = 0; i < MAX_NUMBER_OF_YOKIS_DEVICES; i++) {
+    for (uint8_t i = 0; i < MQTT_MAX_NUM_OF_YOKIS_DEVICES; i++) {
         subscribedTopics[i] = NULL;
     }
 }
 
 boolean Mqtt::subscribe(const char* topic) {
-    if (subscribedTopicIdx >= MAX_NUMBER_OF_YOKIS_DEVICES) return false;
+    if (subscribedTopicIdx >= MQTT_MAX_NUM_OF_YOKIS_DEVICES) return false;
 
     subscribedTopics[subscribedTopicIdx] = (char*)malloc(strlen(topic)+1);
     strlcpy(subscribedTopics[subscribedTopicIdx], topic, strlen(topic)+1);
@@ -36,7 +36,7 @@ void Mqtt::resubscribe() {
 }
 
 void Mqtt::clearSubscriptions() {
-    for (uint8_t i = 0; i < MAX_NUMBER_OF_YOKIS_DEVICES; i++) {
+    for (uint8_t i = 0; i < MQTT_MAX_NUM_OF_YOKIS_DEVICES; i++) {
         if (subscribedTopics[i] != NULL) {
             Serial.println(subscribedTopics[i]);
             free(subscribedTopics[i]);

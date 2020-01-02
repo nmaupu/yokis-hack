@@ -20,20 +20,40 @@ Pairing* g_pairingRF;
 E2bp* g_bp;
 Scanner* g_scanner;
 #ifdef ESP8266
-#define MAX_NUMBER_OF_DEVICES 64
 Mqtt* g_mqtt;
-Device* devices[MAX_NUMBER_OF_DEVICES];
+// no need to store more devices than supported by MQTT
+Device* devices[MQTT_MAX_NUM_OF_YOKIS_DEVICES];
 #endif
 IrqType IrqManager::irqType = PAIRING;
 Device* currentDevice;
 #define CURRENT_DEVICE_DEFAULT_NAME "tempDevice"
 
+// MQTT configuration via compile options for ESP8266
 #ifdef ESP8266
-WiFiClient espClient;
-const char host[] = "ip";
-uint16_t port = 1883;
-char mqttUser[] = "mqtt";
-char mqttPassword[] = "password";
+    WiFiClient espClient;
+    #ifdef MQTT_IP
+    const char host[] = MQTT_IP;
+    #else
+    const char host[] = "192.168.0.1";
+    #endif
+
+    #ifdef MQTT_PORT
+    uint16_t port = (uint16_t)atoi(MQTT_PORT);
+    #else
+    uint16_t port = 1883;
+    #endif
+
+    #ifdef MQTT_USERNAME
+    char mqttUser[] = MQTT_USERNAME;
+    #else
+    char mqttUser[] = "mqtt";
+    #endif
+
+    #ifdef MQTT_PASSWORD
+    char mqttPassword[] = MQTT_PASSWORD;
+    #else
+    char mqttPassword[] = "password";
+    #endif
 #endif
 
 bool pairingCallback(const char*);
@@ -147,7 +167,7 @@ Device* getDeviceFromParams(const char* params) {
     if (pch == NULL || strcmp(pch, "") == 0) {
         d = currentDevice;
     } else {
-        d = Device::getFromList(devices, MAX_NUMBER_OF_DEVICES, pch);
+        d = Device::getFromList(devices, MQTT_MAX_NUM_OF_YOKIS_DEVICES, pch);
     }
 
     return d;
@@ -245,11 +265,11 @@ bool displayDevices(const char*) {
 }
 
 bool reloadConfig(const char*) {
-    for (uint8_t i = 0; i < MAX_NUMBER_OF_DEVICES; i++) {
+    for (uint8_t i = 0; i < MQTT_MAX_NUM_OF_YOKIS_DEVICES; i++) {
         delete(devices[i]); // delete previously allocated device if needed
         devices[i] = NULL;
     }
-    Device::loadFromSpiffs(devices, MAX_NUMBER_OF_DEVICES);
+    Device::loadFromSpiffs(devices, MQTT_MAX_NUM_OF_YOKIS_DEVICES);
     Serial.println("Reloaded.");
     return true;
 }

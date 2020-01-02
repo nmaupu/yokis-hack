@@ -5,7 +5,8 @@
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 
-#define MAX_NUMBER_OF_YOKIS_DEVICES 255
+#define MQTT_TOPIC_COMMAND "cmnd"
+#define MQTT_MAX_NUM_OF_YOKIS_DEVICES 64
 
 class Mqtt : public PubSubClient {
    private:
@@ -13,7 +14,7 @@ class Mqtt : public PubSubClient {
     const char* password;
     const char* host;
     const uint16_t* port;
-    char* subscribedTopics[MAX_NUMBER_OF_YOKIS_DEVICES];
+    char* subscribedTopics[MQTT_MAX_NUM_OF_YOKIS_DEVICES];
     uint8_t subscribedTopicIdx;
     void resubscribe();
 
