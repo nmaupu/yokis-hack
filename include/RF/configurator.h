@@ -6,7 +6,7 @@
 #define DEFAULT_CE_PIN 7
 #define DEFAULT_CS_PIN 8
 
-class RFConfigurator : public RF24 {
+class RFConfigurator : public RF24_forked {
    protected:
     // Setup RF module so that it can accept incoming packets
     virtual void setupRFModule() = 0;

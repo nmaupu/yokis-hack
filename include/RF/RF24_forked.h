@@ -15,9 +15,10 @@
  * Class declaration for RF24 and helper enums
  */
 
-#ifndef __RF24_H__
-#define __RF24_H__
+#ifndef __RF24_FORKED_H__
+#define __RF24_FORKED_H__
 
+#include <RF24.h>
 #include <RF24_config.h>
 
 #if defined(RF24_LINUX) || defined(LITTLEWIRE)
@@ -27,41 +28,10 @@
 #endif
 
 /**
- * Power Amplifier level.
- *
- * For use with setPALevel()
- */
-typedef enum {
-    RF24_PA_MIN = 0,
-    RF24_PA_LOW,
-    RF24_PA_HIGH,
-    RF24_PA_MAX,
-    RF24_PA_ERROR
-} rf24_pa_dbm_e;
-
-/**
- * Data rate.  How fast data moves through the air.
- *
- * For use with setDataRate()
- */
-typedef enum { RF24_1MBPS = 0, RF24_2MBPS, RF24_250KBPS } rf24_datarate_e;
-
-/**
- * CRC Length.  How big (if any) of a CRC is included.
- *
- * For use with setCRCLength()
- */
-typedef enum {
-    RF24_CRC_DISABLED = 0,
-    RF24_CRC_8,
-    RF24_CRC_16
-} rf24_crclength_e;
-
-/**
  * Driver for nRF24L01(+) 2.4GHz Wireless Transceiver
  */
 
-class RF24 {
+class RF24_forked {
    private:
 #ifdef SOFTSPI
     SoftSPI<SOFT_SPI_MISO_PIN, SOFT_SPI_MOSI_PIN, SOFT_SPI_SCK_PIN, SPI_MODE>
@@ -120,7 +90,7 @@ class RF24 {
      * @param _cepin The pin attached to Chip Enable on the RF module
      * @param _cspin The pin attached to Chip Select
      */
-    RF24(uint16_t _cepin, uint16_t _cspin);
+    RF24_forked(uint16_t _cepin, uint16_t _cspin);
     //#if defined (RF24_LINUX)
 
     /**
@@ -134,11 +104,11 @@ class RF24 {
      * @param spispeed For RPi, the SPI speed in MHZ ie: BCM2835_SPI_SPEED_8MHZ
      */
 
-    RF24(uint16_t _cepin, uint16_t _cspin, uint32_t spispeed);
+    RF24_forked(uint16_t _cepin, uint16_t _cspin, uint32_t spispeed);
     //#endif
 
 #if defined(RF24_LINUX)
-    virtual ~RF24(){};
+    virtual ~RF24_forked(){};
 #endif
 
     /**
@@ -2251,4 +2221,4 @@ https://github.com/TMRh20/RF24
  *<br><br><br>
  */
 
-#endif  // __RF24_H__
+#endif  // __RF24_FORKED_H__
