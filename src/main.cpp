@@ -9,7 +9,7 @@
 #ifdef ESP8266
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
-#include "net/mqtt.h"
+#include "net/mqttHass.h"
 #include "net/wifi.h"
 #endif
 
@@ -20,7 +20,7 @@ Pairing* g_pairingRF;
 E2bp* g_bp;
 Scanner* g_scanner;
 #ifdef ESP8266
-Mqtt* g_mqtt;
+MqttHass* g_mqtt;
 // no need to store more devices than supported by MQTT
 Device* devices[MQTT_MAX_NUM_OF_YOKIS_DEVICES];
 #endif
@@ -68,9 +68,10 @@ bool displayConfig(const char*);
 bool displayDevices(const char*);
 bool reloadConfig(const char*);
 Device* getDeviceFromParams(const char*);
+void mqttCallback(char*, uint8_t*, unsigned int);
 #endif
 
-void setup() {
+    void setup() {
     randomSeed(micros());
 
     // Globals' initialization
@@ -81,21 +82,20 @@ void setup() {
     currentDevice = new Device(CURRENT_DEVICE_DEFAULT_NAME);
 
 #ifdef ESP8266
-    setupWifi();
-    g_mqtt = new Mqtt(espClient, host, &port, mqttUser, mqttPassword);
-    g_mqtt->subscribe("esp/test1");
-    g_mqtt->subscribe("esp/test2");
-
     // Load all previously stored devices from SPIFFS memory
     reloadConfig(NULL);
+
+    setupWifi();
+    g_mqtt = new MqttHass(espClient, host, &port, mqttUser, mqttPassword);
+    g_mqtt->setCallback(mqttCallback);
 #endif
 
-    // Serial setup
-    g_serial->registerCallback(
-        new GenericCallback("pair",
-                            "Pair with a Yokis device - basically act as "
-                            "if a Yokis remote try is pairing",
-                            pairingCallback));
+        // Serial setup
+        g_serial->registerCallback(
+            new GenericCallback("pair",
+                                "Pair with a Yokis device - basically act as "
+                                "if a Yokis remote try is pairing",
+                                pairingCallback));
     g_serial->registerCallback(
         new GenericCallback("toggle",
                             "send a toggle message - basically act as a Yokis "
@@ -132,9 +132,27 @@ void setup() {
     g_serial->prompt();
 }
 
+bool initMqtt = false;
 void loop() {
 #if defined(ESP8266)
     g_mqtt->loop();
+
+    if(!initMqtt) {
+        Serial.print("Publishing homeassistant discovery data... ");
+        for (uint8_t i = 0; i < MQTT_MAX_NUM_OF_YOKIS_DEVICES; i++) {
+            if (devices[i] != NULL) {
+                if (g_mqtt->publishDevice(devices[i])) {
+                    g_mqtt->subscribeDevice(devices[i]);
+                    initMqtt = true;
+                } else {
+                    Serial.println("KO");
+                    break;
+                }
+            }
+        }
+
+        if (initMqtt) Serial.println("OK");
+    }
 #endif
     g_serial->readFromSerial();
     delay(1);
@@ -272,5 +290,33 @@ bool reloadConfig(const char*) {
     Device::loadFromSpiffs(devices, MQTT_MAX_NUM_OF_YOKIS_DEVICES);
     Serial.println("Reloaded.");
     return true;
+}
+
+void mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
+    char* tok;
+    char cBuf[32];
+    Device* d;
+
+    strncpy(cBuf, topic, 32);
+    tok = strtok(cBuf, "/");
+    d = Device::getFromList(devices, MQTT_MAX_NUM_OF_YOKIS_DEVICES, tok);
+
+    unsigned int i = 0;
+    for (i = 0; i < length; i++) {
+        if(i < 31) {
+            cBuf[i] = (char)payload[i];
+        }
+    }
+    cBuf[i] = 0;
+
+    IrqManager::irqType = E2BP;
+    g_bp->setDevice(d);
+    if (strcmp(cBuf, "ON") == 0) {
+        g_bp->on();
+        g_mqtt->notifyPower(d, "ON");
+    } else if (strcmp(cBuf, "OFF") == 0) {
+        g_bp->off();
+        g_mqtt->notifyPower(d, "OFF");
+    }
 }
 #endif

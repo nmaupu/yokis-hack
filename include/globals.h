@@ -7,7 +7,7 @@
 #include "RF/scanner.h"
 #include "serial/serialHelper.h"
 #ifdef ESP8266
-#include "net/mqtt.h"
+#include "net/mqttHass.h"
 #endif
 
 #ifdef __cplusplus
@@ -47,7 +47,7 @@ extern Pairing* g_pairingRF;
 extern E2bp* g_bp;
 extern Scanner* g_scanner;
 #ifdef ESP8266
-extern Mqtt* g_mqtt;
+extern MqttHass* g_mqtt;
 #endif
 
 #define FLAG_DEBUG (1 << 0)
