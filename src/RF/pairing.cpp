@@ -90,7 +90,11 @@ void Pairing::interruptRxReady() {
 
         // prepare for next packet which should arrive right after this one
         if (getPayloadSize() == 3) {
-            timeout = 1000; // after receiving first packet, next one should be following quickly ...
+            // after receiving first packet, next one should be following
+            // quickly ...
+            // millis is ok in interrupts but won't be updated
+            // That's ok for this case
+            timeout = millis() + 1000;
             recvBufferAddr += getPayloadSize();
             prepareForReading(5);
         }
@@ -101,7 +105,7 @@ void Pairing::interruptRxReady() {
 ICACHE_RAM_ATTR
 #endif
 void Pairing::interruptTxFailed() {
-    Serial.println("TX sent failed interrupt");
+    //Serial.println("TX sent failed interrupt");
 }
 
 #if defined(ESP8266)
@@ -120,8 +124,7 @@ void Pairing::_debugPrintRecv(byte* recvBuf, uint8_t s) {
 
 // Get address on which communication occur with the device after successful
 // pairing
-void Pairing::getAddressFromRecvData(byte* buf) {
-    if (buf == NULL) return;
+void Pairing::getAddressFromRecvData(uint8_t buf[5]) {
     buf[0] = recvBuffer[3];
     buf[1] = recvBuffer[4];
     buf[2] = recvBuffer[3];
@@ -132,6 +135,16 @@ void Pairing::getAddressFromRecvData(byte* buf) {
 // Get channel on which communication occur with the device after successful
 // pairing
 byte Pairing::getChannelFromRecvData() { return recvBuffer[5]; }
+
+// Get device's version bytes - not sure what those bytes are for yet
+void Pairing::getVersionFromRecvData(uint8_t buf[3]) {
+    memcpy(buf, recvBuffer, 3);
+}
+
+// Get device's serial - not sure what those bytes are for yet
+void Pairing::getSerialFromRecvData(uint8_t buf[2]) {
+    memcpy(buf, recvBuffer+sizeof(uint8_t)*6, 2);
+}
 
 // Print pairing information to configured serial
 void Pairing::printPairingInfo() {

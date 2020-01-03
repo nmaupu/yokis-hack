@@ -64,9 +64,6 @@ extern MqttHass* g_mqtt;
 // toggle a config flag
 #define FLAG_TOGGLE(f) (FLAG_IS_ENABLED(f) ? FLAG_DISABLE(f) : FLAG_ENABLE(f))
 
-#define YOKIS_BEGIN_PACKET 0x35
-#define YOKIS_END_PACKET 0x53
-
 #ifdef __cplusplus
 }  // extern "C"
 #endif

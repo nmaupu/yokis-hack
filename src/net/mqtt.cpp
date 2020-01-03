@@ -75,7 +75,7 @@ boolean Mqtt::loop() {
 }
 
 void Mqtt::callback(char* topic, uint8_t* payload, unsigned int length) {
-    /*Serial.print("Message arrived in topic: ");
+    Serial.print("Message arrived in topic: ");
     Serial.println(topic);
 
     Serial.print("Message:");
@@ -85,9 +85,6 @@ void Mqtt::callback(char* topic, uint8_t* payload, unsigned int length) {
 
     Serial.println();
     Serial.println("-----------------------");
-    */
-
-
 }
 
 #endif

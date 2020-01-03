@@ -30,30 +30,30 @@ Device* currentDevice;
 
 // MQTT configuration via compile options for ESP8266
 #ifdef ESP8266
-    WiFiClient espClient;
-    #ifdef MQTT_IP
-    const char host[] = MQTT_IP;
-    #else
-    const char host[] = "192.168.0.1";
-    #endif
+WiFiClient espClient;
+#ifdef MQTT_IP
+const char host[] = MQTT_IP;
+#else
+const char host[] = "192.168.0.1";
+#endif
 
-    #ifdef MQTT_PORT
-    uint16_t port = (uint16_t)atoi(MQTT_PORT);
-    #else
-    uint16_t port = 1883;
-    #endif
+#ifdef MQTT_PORT
+uint16_t port = (uint16_t)atoi(MQTT_PORT);
+#else
+uint16_t port = 1883;
+#endif
 
-    #ifdef MQTT_USERNAME
-    char mqttUser[] = MQTT_USERNAME;
-    #else
-    char mqttUser[] = "mqtt";
-    #endif
+#ifdef MQTT_USERNAME
+char mqttUser[] = MQTT_USERNAME;
+#else
+char mqttUser[] = "mqtt";
+#endif
 
-    #ifdef MQTT_PASSWORD
-    char mqttPassword[] = MQTT_PASSWORD;
-    #else
-    char mqttPassword[] = "password";
-    #endif
+#ifdef MQTT_PASSWORD
+char mqttPassword[] = MQTT_PASSWORD;
+#else
+char mqttPassword[] = "password";
+#endif
 #endif
 
 bool pairingCallback(const char*);
@@ -67,11 +67,22 @@ bool clearConfig(const char*);
 bool displayConfig(const char*);
 bool displayDevices(const char*);
 bool reloadConfig(const char*);
+bool deleteFromConfig(const char*);
+bool pressCallback(const char*);
+bool releaseCallback(const char*);
+
+// Dimmer callbacks
+bool dimmerMemCallback(const char*);
+bool dimmerMaxCallback(const char*);
+bool dimmerMidCallback(const char*);
+bool dimmerMinCallback(const char*);
+bool dimmerSet(const char*, const uint8_t);
+
 Device* getDeviceFromParams(const char*);
 void mqttCallback(char*, uint8_t*, unsigned int);
 #endif
 
-    void setup() {
+void setup() {
     randomSeed(micros());
 
     // Globals' initialization
@@ -90,33 +101,57 @@ void mqttCallback(char*, uint8_t*, unsigned int);
     g_mqtt->setCallback(mqttCallback);
 #endif
 
-        // Serial setup
-        g_serial->registerCallback(
-            new GenericCallback("pair",
-                                "Pair with a Yokis device - basically act as "
-                                "if a Yokis remote try is pairing",
-                                pairingCallback));
+    // Serial setup
+    g_serial->registerCallback(
+        new GenericCallback("pair",
+                            "Pair with a Yokis device - basically act as "
+                            "if a Yokis remote try is pairing",
+                            pairingCallback));
     g_serial->registerCallback(
         new GenericCallback("toggle",
                             "send a toggle message - basically act as a Yokis "
-                            "remote when button pressed",
+                            "remote when button pressed/released",
                             toggleCallback));
     g_serial->registerCallback(
-        new GenericCallback("on", "On the configured device", onCallback));
+        new GenericCallback("on", "switch ON the configured device", onCallback));
     g_serial->registerCallback(
-        new GenericCallback("off", "On the configured device", offCallback));
+        new GenericCallback("off", "switch OFF the configured device", offCallback));
+
+    g_serial->registerCallback(new GenericCallback(
+        "press", "Press and hold an e2bp button", pressCallback));
+    g_serial->registerCallback(new GenericCallback(
+        "release", "Release an e2bp button", releaseCallback));
+
+    g_serial->registerCallback(new GenericCallback(
+        "dimmem", "Set a dimmer to memory (= 1 button pressed)",
+        dimmerMemCallback));
+    g_serial->registerCallback(new GenericCallback(
+        "dimmax", "Set a dimmer to maximum (= 2 button pressed)",
+        dimmerMaxCallback));
+    g_serial->registerCallback(new GenericCallback(
+        "dimmid", "Set a dimmer to middle (= 3 button pressed)",
+        dimmerMidCallback));
+    g_serial->registerCallback(new GenericCallback(
+        "dimmin", "Set a dimmer to minimum (= 4 button pressed)",
+        dimmerMinCallback));
+
     g_serial->registerCallback(new GenericCallback(
         "scan", "Scan the network for packets", scannerCallback));
+
 #ifdef ESP8266
     g_serial->registerCallback(new GenericCallback(
         "save", "Save current device configuration to SPIFFS",
         storeConfigCallback));
     g_serial->registerCallback(new GenericCallback(
+        "delete", "Delete one entry fron SPIFFS configuration",
+        deleteFromConfig));
+    g_serial->registerCallback(new GenericCallback(
         "clear", "Clear all config previously stored to SPIFFS", clearConfig));
     g_serial->registerCallback(new GenericCallback(
         "reload", "Reload config from SPIFFS to memory", reloadConfig));
     g_serial->registerCallback(new GenericCallback(
-        "dSpiffs", "display config previously stored in SPIFFS", displayConfig));
+        "dSpiffs", "display config previously stored in SPIFFS",
+        displayConfig));
     g_serial->registerCallback(new GenericCallback(
         "dConfig", "display loaded config", displayDevices));
 #endif
@@ -137,7 +172,7 @@ void loop() {
 #if defined(ESP8266)
     g_mqtt->loop();
 
-    if(!initMqtt) {
+    if (!initMqtt) {
         Serial.print("Publishing homeassistant discovery data... ");
         for (uint8_t i = 0; i < MQTT_MAX_NUM_OF_YOKIS_DEVICES; i++) {
             if (devices[i] != NULL) {
@@ -159,14 +194,21 @@ void loop() {
 }
 
 bool pairingCallback(const char*) {
-    uint8_t addr[5];
+    uint8_t buf[5];  // enough size for addr, serial and version
     IrqManager::irqType = PAIRING;
     bool res = g_pairingRF->hackPairing();
     if (res) {
-        g_pairingRF->getAddressFromRecvData(addr);
-        currentDevice->setHardwareAddress(addr);
+        g_pairingRF->getAddressFromRecvData(buf);
+        currentDevice->setHardwareAddress(buf);
         currentDevice->setChannel(g_pairingRF->getChannelFromRecvData());
-        currentDevice->printDebugInfo();
+
+        g_pairingRF->getSerialFromRecvData(buf);
+        currentDevice->setSerial(buf);
+
+        g_pairingRF->getVersionFromRecvData(buf);
+        currentDevice->setVersion(buf);
+
+        currentDevice->toSerial();
     }
     return res;
 }
@@ -233,9 +275,16 @@ bool offCallback(const char* params) {
     return g_bp->off();
 }
 
-bool scannerCallback(const char*) {
+bool scannerCallback(const char* params) {
+    Device* d = getDeviceFromParams(params);
+
+    if (d == NULL || d->getHardwareAddress() == NULL) {
+        Serial.println("No such device");
+        return false;
+    }
+
     IrqManager::irqType = SCANNER;
-    g_scanner->setDevice(currentDevice);
+    g_scanner->setDevice(d);
     g_scanner->setupRFModule();
 
     return true;
@@ -250,8 +299,13 @@ bool storeConfigCallback(const char* param) {
     strncpy(paramBak, param, 127);
     pch = GenericCallback::getNextParam(paramBak);  // get the command 'save'
     pch = GenericCallback::getNextParam(NULL);  // Get the name of the device
-
     currentDevice->setDeviceName(pch);
+
+    pch = GenericCallback::getNextParam(NULL);  // Get the device mode
+    if (pch != NULL) {
+        currentDevice->setMode(pch);
+    }
+
     ret = currentDevice->saveToSpiffs();
     currentDevice->setDeviceName(CURRENT_DEVICE_DEFAULT_NAME);
 
@@ -274,7 +328,7 @@ bool displayDevices(const char*) {
     uint8_t c = 0;
     while (devices[c] != NULL) {
         Serial.println("=== Device ===");
-        devices[c]->printDebugInfo();
+        devices[c]->toSerial();
         Serial.println("==============");
         c++;
     }
@@ -284,11 +338,78 @@ bool displayDevices(const char*) {
 
 bool reloadConfig(const char*) {
     for (uint8_t i = 0; i < MQTT_MAX_NUM_OF_YOKIS_DEVICES; i++) {
-        delete(devices[i]); // delete previously allocated device if needed
+        delete (devices[i]);  // delete previously allocated device if needed
         devices[i] = NULL;
     }
     Device::loadFromSpiffs(devices, MQTT_MAX_NUM_OF_YOKIS_DEVICES);
     Serial.println("Reloaded.");
+    return true;
+}
+
+bool deleteFromConfig(const char* params) {
+    char paramBak[128];
+    char* pch;
+
+    strncpy(paramBak, params, 127);
+    pch = GenericCallback::getNextParam(paramBak);  // get the command 'delete'
+    pch = GenericCallback::getNextParam(NULL);      // Get the name to delete
+
+    Device::deleteFromConfig(pch);
+    return true;
+}
+
+bool pressCallback(const char* params) {
+    Device* d = getDeviceFromParams(params);
+
+    if (d == NULL || d->getHardwareAddress() == NULL) {
+        Serial.println("No such device");
+        return false;
+    }
+
+    IrqManager::irqType = E2BP;
+    g_bp->setDevice(d);
+    g_bp->reset();
+    g_bp->setupRFModule();
+    return g_bp->press();
+}
+
+bool releaseCallback(const char* params) {
+    Device* d = getDeviceFromParams(params);
+
+    if (d == NULL || d->getHardwareAddress() == NULL) {
+        Serial.println("No such device");
+        return false;
+    }
+
+    IrqManager::irqType = E2BP;
+    g_bp->setDevice(d);
+    g_bp->reset();
+    g_bp->setupRFModule();
+    return g_bp->release();
+}
+
+// See Yokis MTV500ER manual for this configs
+// Note: depending on configuration, 2 pulses can set to memory or 100%
+// default is 100% for 2 pulses
+bool dimmerMemCallback(const char* params) { return dimmerSet(params, 1); }
+bool dimmerMaxCallback(const char* params) { return dimmerSet(params, 2); }
+bool dimmerMidCallback(const char* params) { return dimmerSet(params, 3); }
+bool dimmerMinCallback(const char* params) { return dimmerSet(params, 4); }
+bool dimmerSet(const char* params, const uint8_t number) {
+    Device* d = getDeviceFromParams(params);
+
+    if (d == NULL || d->getHardwareAddress() == NULL) {
+        Serial.println("No such device");
+        return false;
+    }
+
+    IrqManager::irqType = E2BP;
+    g_bp->setDevice(d);
+    for (uint8_t i = 0; i < number; i++) {
+        g_bp->toggle();
+        delay(10); // simulate a button release and re-press
+    }
+
     return true;
 }
 
@@ -303,7 +424,7 @@ void mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
 
     unsigned int i = 0;
     for (i = 0; i < length; i++) {
-        if(i < 31) {
+        if (i < 31) {
             cBuf[i] = (char)payload[i];
         }
     }
