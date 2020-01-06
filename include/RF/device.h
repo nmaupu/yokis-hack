@@ -15,6 +15,19 @@ enum DeviceMode {
     NO_RCPT  // No reception, send blindly begin and end packets 30 times
 };
 
+enum DeviceStatus {
+    OFF = 0,
+    ON,
+    UNDEFINED
+};
+
+enum DimmerBrightness {
+    BRIGHTNESS_OFF = 0,
+    BRIGHTNESS_MIN,
+    BRIGHTNESS_MID,
+    BRIGHTNESS_MAX,
+};
+
 class Device {
    private:
     char* deviceName;
@@ -25,6 +38,8 @@ class Device {
     uint8_t serial[2];
     uint8_t version[3];
     DeviceMode mode;
+    DeviceStatus status;
+    DimmerBrightness brightness; // only for dimmer device
 
 #ifdef ESP8266
     static bool spiffsInitialized;
@@ -58,6 +73,9 @@ class Device {
     const uint8_t* getVersion() const;
     const uint8_t* getSerial() const;
     const DeviceMode getMode() const;
+    const DeviceStatus getStatus() const;
+    const DimmerBrightness getBrightness() const;
+    static const char* getStatusAsString(DeviceStatus status);
 
     // Setters
     void setDeviceName(const char*);
@@ -73,9 +91,12 @@ class Device {
     void setChannel(uint8_t);
     void setMode(DeviceMode);
     void setMode(const char*);
+    void setStatus(DeviceStatus);
+    void setBrightness(DimmerBrightness);
 
     // misc
     void toSerial();
+    void toggleStatus();
     void copy(const Device*);
     static Device* getFromList(Device**, size_t, const char*);
 #ifdef ESP8266

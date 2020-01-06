@@ -54,30 +54,32 @@ char mqttPassword[] = MQTT_PASSWORD;
 #else
 char mqttPassword[] = "password";
 #endif
+
+bool initMqtt = false;
 #endif
 
+// Callback functions
 bool pairingCallback(const char*);
 bool onCallback(const char*);
 bool offCallback(const char*);
 bool toggleCallback(const char*);
 bool scannerCallback(const char*);
-#ifdef ESP8266
-bool storeConfigCallback(const char*);
-bool clearConfig(const char*);
-bool displayConfig(const char*);
 bool displayDevices(const char*);
-bool reloadConfig(const char*);
-bool deleteFromConfig(const char*);
 bool pressCallback(const char*);
 bool releaseCallback(const char*);
-
-// Dimmer callbacks
 bool dimmerMemCallback(const char*);
 bool dimmerMaxCallback(const char*);
 bool dimmerMidCallback(const char*);
 bool dimmerMinCallback(const char*);
+bool dimmerNilCallback(const char*);
 bool dimmerSet(const char*, const uint8_t);
 
+#ifdef ESP8266
+bool storeConfigCallback(const char*);
+bool clearConfig(const char*);
+bool displayConfig(const char*);
+bool reloadConfig(const char*);
+bool deleteFromConfig(const char*);
 Device* getDeviceFromParams(const char*);
 void mqttCallback(char*, uint8_t*, unsigned int);
 #endif
@@ -102,41 +104,43 @@ void setup() {
 #endif
 
     // Serial setup
-    g_serial->registerCallback(
-        new GenericCallback("pair",
-                            "Pair with a Yokis device - basically act as "
-                            "if a Yokis remote try is pairing",
-                            pairingCallback));
+    g_serial->registerCallback(new GenericCallback(
+        "pair",
+        "Pair with a Yokis device - basically act as "
+        "if a Yokis remote is in pairing mode (5 button clicks)",
+        pairingCallback));
     g_serial->registerCallback(
         new GenericCallback("toggle",
                             "send a toggle message - basically act as a Yokis "
-                            "remote when button pressed/released",
+                            "remote when a button is pressed then released",
                             toggleCallback));
-    g_serial->registerCallback(
-        new GenericCallback("on", "switch ON the configured device", onCallback));
-    g_serial->registerCallback(
-        new GenericCallback("off", "switch OFF the configured device", offCallback));
-
+    g_serial->registerCallback(new GenericCallback(
+        "scan", "Scan the network for packets", scannerCallback));
+    g_serial->registerCallback(new GenericCallback(
+        "dConfig", "display loaded config / current config", displayDevices));
+    g_serial->registerCallback(new GenericCallback(
+        "on", "Switch ON the configured device", onCallback));
+    g_serial->registerCallback(new GenericCallback(
+        "off", "Switch OFF the configured device", offCallback));
     g_serial->registerCallback(new GenericCallback(
         "press", "Press and hold an e2bp button", pressCallback));
     g_serial->registerCallback(new GenericCallback(
         "release", "Release an e2bp button", releaseCallback));
-
     g_serial->registerCallback(new GenericCallback(
-        "dimmem", "Set a dimmer to memory (= 1 button pressed)",
+        "dimmem", "Set a dimmer to memory (= 1 button pushes)",
         dimmerMemCallback));
     g_serial->registerCallback(new GenericCallback(
-        "dimmax", "Set a dimmer to maximum (= 2 button pressed)",
+        "dimmax", "Set a dimmer to maximum (= 2 button pushes)",
         dimmerMaxCallback));
     g_serial->registerCallback(new GenericCallback(
-        "dimmid", "Set a dimmer to middle (= 3 button pressed)",
+        "dimmid", "Set a dimmer to middle (= 3 button pushes)",
         dimmerMidCallback));
     g_serial->registerCallback(new GenericCallback(
-        "dimmin", "Set a dimmer to minimum (= 4 button pressed)",
+        "dimmin", "Set a dimmer to minimum (= 4 button pushes)",
         dimmerMinCallback));
-
     g_serial->registerCallback(new GenericCallback(
-        "scan", "Scan the network for packets", scannerCallback));
+        "dimnil", "Set a dimmer to night light mode (= 7 button pushes)",
+        dimmerNilCallback));
 
 #ifdef ESP8266
     g_serial->registerCallback(new GenericCallback(
@@ -152,8 +156,6 @@ void setup() {
     g_serial->registerCallback(new GenericCallback(
         "dSpiffs", "display config previously stored in SPIFFS",
         displayConfig));
-    g_serial->registerCallback(new GenericCallback(
-        "dConfig", "display loaded config", displayDevices));
 #endif
 
     // Handle interrupt pin
@@ -161,13 +163,12 @@ void setup() {
     attachInterrupt(digitalPinToInterrupt(IRQ_PIN), IrqManager::processIRQ,
                     FALLING);
 
-    printf_begin();
+    printf_begin();  // Works only for Arduino devices...
     g_serial->executeCallback("help");
     Serial.println();
     g_serial->prompt();
 }
 
-bool initMqtt = false;
 void loop() {
 #if defined(ESP8266)
     g_mqtt->loop();
@@ -216,27 +217,32 @@ bool pairingCallback(const char*) {
 // Get a device from the list with the given params
 Device* getDeviceFromParams(const char* params) {
 #ifdef ESP8266
-    char paramBak[128];
+    char* paramsBak;
     char* pch;
     Device* d;
 
-    strncpy(paramBak, params, 127);
-    pch = GenericCallback::getNextParam(paramBak);  // get the command name
-    pch = GenericCallback::getNextParam(NULL);  // Get the name of the device
+    int len = strlen(params);
+    paramsBak = new char[len + 1];
+    strncpy(paramsBak, params, len);
+    paramsBak[len] = 0;
+    strtok(paramsBak, " ");   // ignore the command name
+    pch = strtok(NULL, " ");  // get the name of the device
 
-    if (pch == NULL || strcmp(pch, "") == 0) {
+    if (pch == NULL || strcmp("", pch) == 0) {
         d = currentDevice;
     } else {
         d = Device::getFromList(devices, MQTT_MAX_NUM_OF_YOKIS_DEVICES, pch);
     }
 
+    delete[] paramsBak;
     return d;
 #else
     return currentDevice;
 #endif
 }
 
-bool toggleCallback(const char* params) {
+// Generic on, off or toggle
+bool changeDeviceState(const char* params, bool (E2bp::*func)(void)) {
     Device* d = getDeviceFromParams(params);
 
     if (d == NULL || d->getHardwareAddress() == NULL) {
@@ -246,33 +252,29 @@ bool toggleCallback(const char* params) {
 
     IrqManager::irqType = E2BP;
     g_bp->setDevice(d);
-    return g_bp->toggle();
+    bool ret = (g_bp->*func)();
+#ifdef ESP8266
+    if (ret) {
+        if (d->getMode() == DIMMER) {
+            g_mqtt->notifyBrightness(d);
+        } else {
+            g_mqtt->notifyPower(d);
+        }
+    }
+#endif
+    return ret;
+}
+
+bool toggleCallback(const char* params) {
+    return changeDeviceState(params, &E2bp::toggle);
 }
 
 bool onCallback(const char* params) {
-    Device* d = getDeviceFromParams(params);
-
-    if (d == NULL || d->getHardwareAddress() == NULL) {
-        Serial.println("No such device");
-        return false;
-    }
-
-    IrqManager::irqType = E2BP;
-    g_bp->setDevice(d);
-    return g_bp->on();
+    return changeDeviceState(params, &E2bp::on);
 }
 
 bool offCallback(const char* params) {
-    Device* d = getDeviceFromParams(params);
-
-    if (d == NULL || d->getHardwareAddress() == NULL) {
-        Serial.println("No such device");
-        return false;
-    }
-
-    IrqManager::irqType = E2BP;
-    g_bp->setDevice(d);
-    return g_bp->off();
+    return changeDeviceState(params, &E2bp::off);
 }
 
 bool scannerCallback(const char* params) {
@@ -290,41 +292,8 @@ bool scannerCallback(const char* params) {
     return true;
 }
 
-#ifdef ESP8266
-bool storeConfigCallback(const char* param) {
-    char paramBak[128];
-    char* pch;
-    bool ret;
-
-    strncpy(paramBak, param, 127);
-    pch = GenericCallback::getNextParam(paramBak);  // get the command 'save'
-    pch = GenericCallback::getNextParam(NULL);  // Get the name of the device
-    currentDevice->setDeviceName(pch);
-
-    pch = GenericCallback::getNextParam(NULL);  // Get the device mode
-    if (pch != NULL) {
-        currentDevice->setMode(pch);
-    }
-
-    ret = currentDevice->saveToSpiffs();
-    currentDevice->setDeviceName(CURRENT_DEVICE_DEFAULT_NAME);
-
-    if (ret) Serial.println("Saved.");
-
-    return ret;
-}
-
-bool clearConfig(const char*) {
-    Device::clearConfigFromSpiffs();
-    return true;
-}
-
-bool displayConfig(const char*) {
-    Device::displayConfigFromSpiffs();
-    return true;
-}
-
 bool displayDevices(const char*) {
+#ifdef ESP8266
     uint8_t c = 0;
     while (devices[c] != NULL) {
         Serial.println("=== Device ===");
@@ -332,30 +301,32 @@ bool displayDevices(const char*) {
         Serial.println("==============");
         c++;
     }
-
+#else
+    // for arduino devices, only display the currentDevice
+    currentDevice->toSerial();
+#endif
     return true;
 }
 
-bool reloadConfig(const char*) {
-    for (uint8_t i = 0; i < MQTT_MAX_NUM_OF_YOKIS_DEVICES; i++) {
-        delete (devices[i]);  // delete previously allocated device if needed
-        devices[i] = NULL;
-    }
-    Device::loadFromSpiffs(devices, MQTT_MAX_NUM_OF_YOKIS_DEVICES);
-    Serial.println("Reloaded.");
-    return true;
+bool dimmerMemCallback(const char* params) {
+    int ret = changeDeviceState(params, &E2bp::dimmerMem);
+    return ret != -1;
 }
-
-bool deleteFromConfig(const char* params) {
-    char paramBak[128];
-    char* pch;
-
-    strncpy(paramBak, params, 127);
-    pch = GenericCallback::getNextParam(paramBak);  // get the command 'delete'
-    pch = GenericCallback::getNextParam(NULL);      // Get the name to delete
-
-    Device::deleteFromConfig(pch);
-    return true;
+bool dimmerMaxCallback(const char* params) {
+    int ret = changeDeviceState(params, &E2bp::dimmerMax);
+    return ret != -1;
+}
+bool dimmerMidCallback(const char* params) {
+    int ret = changeDeviceState(params, &E2bp::dimmerMid);
+    return ret != -1;
+}
+bool dimmerMinCallback(const char* params) {
+    int ret = changeDeviceState(params, &E2bp::dimmerMin);
+    return ret != -1;
+}
+bool dimmerNilCallback(const char* params) {
+    int ret = changeDeviceState(params, &E2bp::dimmerNiL);
+    return ret != -1;
 }
 
 bool pressCallback(const char* params) {
@@ -388,56 +359,159 @@ bool releaseCallback(const char* params) {
     return g_bp->release();
 }
 
-// See Yokis MTV500ER manual for this configs
-// Note: depending on configuration, 2 pulses can set to memory or 100%
-// default is 100% for 2 pulses
-bool dimmerMemCallback(const char* params) { return dimmerSet(params, 1); }
-bool dimmerMaxCallback(const char* params) { return dimmerSet(params, 2); }
-bool dimmerMidCallback(const char* params) { return dimmerSet(params, 3); }
-bool dimmerMinCallback(const char* params) { return dimmerSet(params, 4); }
-bool dimmerSet(const char* params, const uint8_t number) {
-    Device* d = getDeviceFromParams(params);
+#ifdef ESP8266
+bool storeConfigCallback(const char* params) {
+    char* paramsBak;
+    char* pch;
+    bool ret;
 
-    if (d == NULL || d->getHardwareAddress() == NULL) {
-        Serial.println("No such device");
-        return false;
+    int len = strlen(params);
+    paramsBak = new char[len + 1];
+    strncpy(paramsBak, params, len);
+    paramsBak[len] = 0;
+    strtok(paramsBak, " ");   // ignore the command name
+    pch = strtok(NULL, " ");  // get the name of the device
+    currentDevice->setDeviceName(pch);
+
+    pch = strtok(NULL, " ");  // Get the device mode
+    if (pch != NULL) {
+        currentDevice->setMode(pch);
     }
 
-    IrqManager::irqType = E2BP;
-    g_bp->setDevice(d);
-    for (uint8_t i = 0; i < number; i++) {
-        g_bp->toggle();
-        delay(10); // simulate a button release and re-press
-    }
+    ret = currentDevice->saveToSpiffs();
+    if (ret) Serial.println("Saved.");
 
+    // reset default name
+    currentDevice->setDeviceName(CURRENT_DEVICE_DEFAULT_NAME);
+
+    delete[] paramsBak;
+    return ret;
+}
+
+bool clearConfig(const char*) {
+    Device::clearConfigFromSpiffs();
+    return true;
+}
+
+bool displayConfig(const char*) {
+    Device::displayConfigFromSpiffs();
+    return true;
+}
+
+bool reloadConfig(const char*) {
+    for (uint8_t i = 0; i < MQTT_MAX_NUM_OF_YOKIS_DEVICES; i++) {
+        delete (devices[i]);  // delete previously allocated device if needed
+        devices[i] = NULL;
+    }
+    Device::loadFromSpiffs(devices, MQTT_MAX_NUM_OF_YOKIS_DEVICES);
+    Serial.println("Reloaded.");
+    return true;
+}
+
+bool deleteFromConfig(const char* params) {
+    char* paramsBak;
+    char* pch;
+
+    int len = strlen(params);
+    paramsBak = new char[len + 1];
+    strncpy(paramsBak, params, len);
+    paramsBak[len] = 0;
+    strtok(paramsBak, " ");   // ignore the command
+    pch = strtok(NULL, " ");  // Get the name to delete
+
+    Device::deleteFromConfig(pch);
+
+    delete[] paramsBak;
     return true;
 }
 
 void mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
     char* tok;
-    char cBuf[32];
+    char* mTokBuf = NULL;
+    char* mTopic = NULL;
+    char* mCmnd = NULL;
+    char* mPayload = NULL;
     Device* d;
+    size_t len;
 
-    strncpy(cBuf, topic, 32);
-    tok = strtok(cBuf, "/");
+    // Topic copy
+    len = strlen(topic);
+    mTopic = new char[len + 1];
+    strncpy(mTopic, topic, len);
+    mTopic[len] = 0;
+
+    // Get device
+    mTokBuf = new char[len + 1];
+    strncpy(mTokBuf, mTopic, len);
+    mTokBuf[len] = 0;
+    tok = strtok(mTokBuf, "/");  // device name
     d = Device::getFromList(devices, MQTT_MAX_NUM_OF_YOKIS_DEVICES, tok);
 
-    unsigned int i = 0;
-    for (i = 0; i < length; i++) {
-        if (i < 31) {
-            cBuf[i] = (char)payload[i];
-        }
-    }
-    cBuf[i] = 0;
+    // Get cmnd type (POWER or BRIGHTNESS)
+    tok = strtok(NULL, "/");  // cmnd
+    tok = strtok(NULL, "/");  // POWER or BRIGHTNESS
+    len = strlen(tok);
+    mCmnd = new char[len + 1];
+    strncpy(mCmnd, tok, len);
+    mCmnd[len] = 0;
 
+    // Get payload
+    mPayload = new char[length + 1];
+    strncpy(mPayload, (char*)payload, length);  // consider payload as char*
+    mPayload[length] = 0;
+
+    // Process MQTT message
     IrqManager::irqType = E2BP;
     g_bp->setDevice(d);
-    if (strcmp(cBuf, "ON") == 0) {
-        g_bp->on();
-        g_mqtt->notifyPower(d, "ON");
-    } else if (strcmp(cBuf, "OFF") == 0) {
-        g_bp->off();
-        g_mqtt->notifyPower(d, "OFF");
+    switch (d->getMode()) {
+        case ON_OFF:
+        case NO_RCPT:
+            if (strcmp(mPayload, "ON") == 0) {
+                g_bp->on();
+            } else if (strcmp(mPayload, "OFF") == 0) {
+                g_bp->off();
+            }
+
+            g_mqtt->notifyPower(d);
+            break;
+        case DIMMER:
+            // brightness will be 0 for anything that is not a number
+            // so will set light to OFF for all possible POWER cases (ON OR OFF)
+            // HASS will send only POWER OFF, never POWER ON
+            // because on_command_type=brightness set
+            // on MQTT configuration (see MqttHass class)
+            int brightness = (uint8_t)atoi(mPayload);
+
+            Serial.print("brightness=");
+            Serial.println(brightness, DEC);
+
+            switch (brightness) {
+                case BRIGHTNESS_OFF:
+                    g_bp->off();
+                    break;
+                case BRIGHTNESS_MIN:
+                    g_bp->dimmerMin();
+                    break;
+                case BRIGHTNESS_MID:
+                    g_bp->dimmerMid();
+                    break;
+                case BRIGHTNESS_MAX:
+                    g_bp->dimmerMax();
+                    break;
+            }
+
+            g_mqtt->notifyBrightness(d);
+            // In HASS, when clicking on cursor to set brightness
+            // 2 messages are sent to the MQTT broker...
+            // delay to avoid processing 2 times the same message too quickly.
+            // Light is flickering a little but it works...
+            delay(800);
+            break;
     }
+
+    delete[] mTopic;
+    delete[] mTokBuf;
+    delete[] mCmnd;
+    delete[] mPayload;
 }
 #endif

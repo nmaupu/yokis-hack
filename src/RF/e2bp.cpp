@@ -16,27 +16,62 @@ void E2bp::reset() {
     this->loopContinue = true;
 }
 
-void E2bp::setDevice(const Device* device) { this->device->copy(device); }
+void E2bp::setDevice(Device* device) { this->device = device; }
 
 const Device* E2bp::getDevice() { return this->device; }
 
-bool E2bp::setDeviceStatus(PayloadStatus ps) {
-    if (device->getMode() == DIMMER || device->getMode() == NO_RCPT) {
+// Returns last known device status
+// Not reliable for DIMMER devices
+DeviceStatus E2bp::getLastKnownDeviceStatus() {
+    if (secondPayloadStatus == UNDEFINED) {
+        // We probably never received the second payload.
+        // This happens in certain RF environments...
+        return firstPayloadStatus;
+    }
+
+    // Second payload has the device status (for ON_OFF devices)
+    return secondPayloadStatus;
+}
+
+bool E2bp::setDeviceStatus(DeviceStatus ds) {
+    if (device->getMode() == NO_RCPT) {
         // set device status is not supported, toggle instead
         Serial.println(
             "on/off is not supported with this device, using toggle instead");
         return toggle();
+    } else if (device->getMode() == DIMMER) {
+        if (ds == ON) {
+            // To be sure it's ON, set to mid (3 pulses)
+            // HASS will set brightness to max when powered on though
+            return dimmerMid();
+        } else {
+            // To be sure it's OFF, set to max and toggle
+            dimmerMax();
+            delay(800);
+            bool ret = toggle();
+            if (ret) device->setStatus(OFF);
+            return ret;
+        }
     }
 
+    // ON_OFF device
     unsigned long timeout = millis() + 1000;
+    bool retPress = false;
+    bool retRelease = false;
     reset();
     setupRFModule();
-    while (millis() <= timeout && secondPayloadStatus != ps) {
-        press();
-        release();
+    while (millis() <= timeout && secondPayloadStatus != ds) {
+        retPress = press();
+        if (retPress) retRelease = release();
     }
 
-    return true;
+    // We don't test with retRelease because
+    // we can have a device toggled without receiving a response...
+    // if retPress is ok, we assume, device is toggled successfully
+    // Even if status is set when calling release, force status here
+    // just in case.
+    if (retPress) device->setStatus(ds);
+    return retPress && retRelease;
 }
 
 bool E2bp::on() { return setDeviceStatus(ON); }
@@ -45,31 +80,101 @@ bool E2bp::off() { return setDeviceStatus(OFF); }
 
 bool E2bp::toggle() {
     unsigned long timeout = millis() + 1000;
-    bool pressRet = false, releaseRet = false;
+    bool retPress = false, retRelease = false;
 
     reset();
     setupRFModule();
     while (millis() < timeout) {
-        pressRet = press();
+        retPress = press();
         if (device->getMode() == DIMMER)
             delay(100);  // No need to wait for on/off devices
-        releaseRet = release();
 
-        if (device->getMode() == ON_OFF) {
-            if (firstPayloadStatus != secondPayloadStatus)
-                break;  // Status changed successfully
-        } else if (device->getMode() == DIMMER) {
-            break;
+        if (retPress) {  // only do it if press has been ack (true)
+            retRelease = release();
+
+            if (device->getMode() == ON_OFF) {
+                if (firstPayloadStatus != secondPayloadStatus &&
+                    secondPayloadStatus != UNDEFINED)
+                    break;  // Status changed successfully
+            } else if (device->getMode() == DIMMER) {
+                break;
+            }
         }
     }
 
-    return pressRet && releaseRet;
+    // We don't test with retRelease because
+    // we can have a device toggled without receiving a response...
+    // if retPress is ok, we assume, device is toggled successfully
+    // release set device status buf if we don't receive any response,
+    // status won't be set... Redo it here.
+    if (retPress && device->getMode() == ON_OFF) {
+        // we know the status, set it
+        device->setStatus(getLastKnownDeviceStatus());
+    } else if (retPress && device->getMode() == DIMMER) {
+        // Seems to be receiving 0 for ON and 1 for OFF
+        // but not really sure about that :/
+        device->setStatus(getLastKnownDeviceStatus());
+        device->toggleStatus();
+    }
+    return retPress && retRelease;
+}
+
+// See Yokis MTV500ER manual for this configs
+// Note: depending on configuration, 2 pulses can set to memory or 100%
+// default is 100% for 2 pulses, that's what we will be using here...
+bool E2bp::dimmerMem() { return dimmerSet(1); }
+bool E2bp::dimmerMax() { return dimmerSet(2); }
+bool E2bp::dimmerMid() { return dimmerSet(3); }
+bool E2bp::dimmerMin() { return dimmerSet(4); }
+bool E2bp::dimmerNiL() { return dimmerSet(7); }
+bool E2bp::dimmerSet(const uint8_t number) {
+    if (device->getMode() != DIMMER) {
+        Serial.println("Not a dimmer device, ignoring.");
+        return false;
+    }
+
+    bool ret = true;
+
+    for (uint8_t i = 0; i < number && ret; i++) {
+        ret = toggle();
+        delay(10);
+    }
+
+    // Force status as we know it for sure !
+    // 0 = no action
+    // 1 = simple toggle
+    // 2 = max (or memory)
+    // 3 = mid
+    // 4 = min
+    if (number > 1 && ret)
+        device->setStatus(ON);
+    else if (number == 1 && ret)
+        device->toggleStatus();
+
+    if (ret) {
+        switch (number) {
+            case 0:
+                device->setBrightness(BRIGHTNESS_OFF);
+                break;
+            case 2:
+                device->setBrightness(BRIGHTNESS_MAX);
+                break;
+            case 3:
+                device->setBrightness(BRIGHTNESS_MID);
+                break;
+            case 4:
+                device->setBrightness(BRIGHTNESS_MIN);
+                break;
+        }
+    }
+
+    return ret;
 }
 
 bool E2bp::press() {
     bool ret = true;
     if (IS_DEBUG_ENABLED) Serial.println("Button pressing");
-    uint8_t buf[9];
+    uint8_t buf[PAYLOAD_LENGTH];
 
     firstPayloadStatus = UNDEFINED;
     getFirstPayload(buf);
@@ -82,12 +187,18 @@ bool E2bp::press() {
 bool E2bp::release() {
     bool ret = true;
     if (IS_DEBUG_ENABLED) Serial.println("Button releasing");
-    uint8_t buf[9];
+    uint8_t buf[PAYLOAD_LENGTH];
 
     getSecondPayload(buf);
     ret = sendPayload(buf);
 
     if (IS_DEBUG_ENABLED) Serial.println("Button released");
+    if (ret && device->getMode() == ON_OFF) {
+        device->setStatus(getLastKnownDeviceStatus());
+    } else if (ret && device->getMode() == DIMMER) {
+        device->setStatus(getLastKnownDeviceStatus());
+        device->toggleStatus();
+    }
     return ret;
 }
 
@@ -130,11 +241,7 @@ bool E2bp::sendPayload(const uint8_t* payload) {
     }
 
     setupPayload(payload);
-    runMainLoop();
-    // delay(1);
-
-    // Wish to find a way to return a real status one day...
-    return true;
+    return runMainLoop();
 }
 
 void E2bp::setupRFModule() {
@@ -174,7 +281,7 @@ void E2bp::setupRFModule() {
     }
 }
 
-void E2bp::runMainLoop() {
+bool E2bp::runMainLoop() {
     unsigned long timeout = millis() + MAIN_LOOP_TIMEOUT_MILLIS;
     uint8_t buf[2];
     uint8_t nbLoops = 0;
@@ -218,6 +325,8 @@ void E2bp::runMainLoop() {
         else
             secondPayloadStatus = buf[1] == 1 ? ON : OFF;
     }
+
+    return !loopContinue;  // false if timeout occured
 }
 
 void E2bp::setupPayload(const uint8_t* payload) {
@@ -226,8 +335,6 @@ void E2bp::setupPayload(const uint8_t* payload) {
     setPayloadSize(PAYLOAD_LENGTH);
     flush_tx();
     write_payload(payload, PAYLOAD_LENGTH, W_TX_PAYLOAD);
-    // memcpy(currentPayload, payload, PAYLOAD_LENGTH);
-    // startFastWrite(currentPayload, PAYLOAD_LENGTH, false, false);
 }
 
 #if defined(ESP8266)

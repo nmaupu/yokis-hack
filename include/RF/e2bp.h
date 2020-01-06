@@ -8,24 +8,21 @@
 #include "RF/device.h"
 
 #define PAYLOAD_LENGTH 9
-#define MAIN_LOOP_TIMEOUT_MILLIS 200
-
-enum PayloadStatus { OFF = 0, ON = 1, UNDEFINED = 2 };
+#define MAIN_LOOP_TIMEOUT_MILLIS 500
 
 // Very low level class to control a Yokis device just like a e2bp remote
 class E2bp : public RFConfigurator {
    private:
     Device *device;
     bool loopContinue;
-    PayloadStatus firstPayloadStatus, secondPayloadStatus;
-    char currentPayload[PAYLOAD_LENGTH];
+    DeviceStatus firstPayloadStatus, secondPayloadStatus;
 
-    bool setDeviceStatus(PayloadStatus);
+    bool setDeviceStatus(DeviceStatus);
     void getFirstPayload(uint8_t *);
     void getSecondPayload(uint8_t *);
 
    protected:
-    void runMainLoop();
+    bool runMainLoop();
     void setupPayload(const uint8_t *);
 
    public:
@@ -38,19 +35,33 @@ class E2bp : public RFConfigurator {
     bool on();
     bool off();
     bool toggle();
+    // See Yokis MTV500ER manual for those configs
+    // Note: depending on configuration, 2 pulses can set to "memory" or 100%
+    // default is 100% for 2 pulses, that's what we will be using here...
+    bool dimmerSet(const uint8_t);
+    // Set dimmer to "mem" Light
+    bool dimmerMem();
+    // Set dimmer to max light
+    bool dimmerMax();
+    // Set dimmer to middle light
+    bool dimmerMid();
+    // Set dimmer to min light
+    bool dimmerMin();
+    // Set dimmer to "night light"
+    bool dimmerNiL();
     // press the button
     bool press();
     // release the button
     bool release();
     void reset();
     void setupRFModule() override;
+    DeviceStatus getLastKnownDeviceStatus();
     void interruptTxOk() override;
     void interruptRxReady() override;
     void interruptTxFailed() override;
 
-
     // Getters / setters
-    void setDevice(const Device *);
+    void setDevice(Device *);
     const Device *getDevice();
 };
 

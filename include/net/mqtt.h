@@ -17,6 +17,7 @@ class Mqtt : public PubSubClient {
     char* subscribedTopics[MQTT_MAX_NUM_OF_YOKIS_DEVICES];
     uint8_t subscribedTopicIdx;
     void resubscribe();
+    static void callback(char*, uint8_t*, unsigned int);
 
    public:
     Mqtt(WiFiClient&, const char*, const uint16_t*, const char*, const char*);
@@ -24,7 +25,6 @@ class Mqtt : public PubSubClient {
     void clearSubscriptions();
     void reconnect();
     boolean loop();
-    static void callback(char*, uint8_t*, unsigned int);
 };
 
 #endif

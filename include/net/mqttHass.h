@@ -13,17 +13,18 @@
 #define HASS_PREFIX "homeassistant"
 
 class MqttHass : public Mqtt {
-    private:
     protected:
-     char* getMessageJson(const Device*);
-     char* getPublishTopic(const Device*);
+     char* newMessageJson(const Device*);
+     char* newPublishTopic(const Device*);
 
     public:
      MqttHass(WiFiClient&, const char*, const uint16_t*, const char*, const char*);
      bool publishDevice(const Device*);
      void subscribeDevice(const Device*);
      void notifyOnline(const Device*);
-     void notifyPower(const Device*, const char*);
+     void notifyPower(const Device*);
+     void notifyPower(const Device*, DeviceStatus);
+     void notifyBrightness(const Device* device);
 };
 
 
