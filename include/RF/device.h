@@ -21,11 +21,14 @@ enum DeviceStatus {
     UNDEFINED
 };
 
+// Note: There is not 3 because in HASS, we use 5 values to
+// have a slider with a 'middle' value.
+// 3 is always considered as MAX value
 enum DimmerBrightness {
     BRIGHTNESS_OFF = 0,
-    BRIGHTNESS_MIN,
-    BRIGHTNESS_MID,
-    BRIGHTNESS_MAX,
+    BRIGHTNESS_MIN = 1,
+    BRIGHTNESS_MID = 2,
+    BRIGHTNESS_MAX = 4
 };
 
 class Device {
@@ -40,6 +43,7 @@ class Device {
     DeviceMode mode;
     DeviceStatus status;
     DimmerBrightness brightness; // only for dimmer device
+    unsigned long lastUpdateMillis;
 
 #ifdef ESP8266
     static bool spiffsInitialized;
@@ -75,6 +79,8 @@ class Device {
     const DeviceMode getMode() const;
     const DeviceStatus getStatus() const;
     const DimmerBrightness getBrightness() const;
+    // Last time device status was updated
+    const unsigned long getLastUpdateMillis() const;
     static const char* getStatusAsString(DeviceStatus status);
 
     // Setters
@@ -93,6 +99,7 @@ class Device {
     void setMode(const char*);
     void setStatus(DeviceStatus);
     void setBrightness(DimmerBrightness);
+    void setLastUpdateMillis(const unsigned long);
 
     // misc
     void toSerial();

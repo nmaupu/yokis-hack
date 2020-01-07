@@ -30,6 +30,14 @@ Device* currentDevice;
 
 // MQTT configuration via compile options for ESP8266
 #ifdef ESP8266
+
+// Don't update the same device during the MQTT_UPDATE_MILLIS_WINDOW
+// time window !
+// HASS sends sometimes multiple times the same MQTT message in a row...
+// Usually 2 MQTT messages sent in a row are processed very quickly
+// something like 3 to 5 ms
+#define MQTT_UPDATE_MILLIS_WINDOW 50
+
 WiFiClient espClient;
 #ifdef MQTT_IP
 const char host[] = MQTT_IP;
@@ -447,6 +455,22 @@ void mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
     tok = strtok(mTokBuf, "/");  // device name
     d = Device::getFromList(devices, MQTT_MAX_NUM_OF_YOKIS_DEVICES, tok);
 
+    // If we update this device too soon, ignore the payload
+    unsigned long now = millis();
+    if (d->getLastUpdateMillis() + MQTT_UPDATE_MILLIS_WINDOW > now) {
+        Serial.println("Ignoring MQTT message: received too soon for this device");
+        Serial.print("Last update: ");
+        Serial.println(d->getLastUpdateMillis(), DEC);
+        Serial.print("This update: ");
+        Serial.println(now, DEC);
+        Serial.print("Difference: ");
+        Serial.println(now - d->getLastUpdateMillis());
+
+        delete[] mTopic;
+        delete[] mTokBuf;
+        return;
+    }
+
     // Get cmnd type (POWER or BRIGHTNESS)
     tok = strtok(NULL, "/");  // cmnd
     tok = strtok(NULL, "/");  // POWER or BRIGHTNESS
@@ -482,9 +506,6 @@ void mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
             // on MQTT configuration (see MqttHass class)
             int brightness = (uint8_t)atoi(mPayload);
 
-            Serial.print("brightness=");
-            Serial.println(brightness, DEC);
-
             switch (brightness) {
                 case BRIGHTNESS_OFF:
                     g_bp->off();
@@ -495,17 +516,12 @@ void mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
                 case BRIGHTNESS_MID:
                     g_bp->dimmerMid();
                     break;
-                case BRIGHTNESS_MAX:
+                default: // MAX values
                     g_bp->dimmerMax();
                     break;
             }
 
             g_mqtt->notifyBrightness(d);
-            // In HASS, when clicking on cursor to set brightness
-            // 2 messages are sent to the MQTT broker...
-            // delay to avoid processing 2 times the same message too quickly.
-            // Light is flickering a little but it works...
-            delay(800);
             break;
     }
 

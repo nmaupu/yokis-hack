@@ -27,6 +27,7 @@ Device::Device(const char* dname) {
     this->setMode(ON_OFF);  // most used devices AFAIK
     this->setStatus(UNDEFINED);
     brightness = BRIGHTNESS_OFF;
+    this->lastUpdateMillis = 0;
 }
 
 Device::Device(const Device* device) : Device(device->deviceName) {
@@ -72,6 +73,10 @@ const DeviceMode Device::getMode() const { return mode; }
 const DeviceStatus Device::getStatus() const { return status; }
 
 const DimmerBrightness Device::getBrightness() const { return brightness; }
+
+const unsigned long Device::getLastUpdateMillis() const {
+    return lastUpdateMillis;
+}
 
 // static
 const char* Device::getStatusAsString(DeviceStatus status) {
@@ -150,16 +155,15 @@ void Device::setMode(const char* mode) {
 void Device::setStatus(DeviceStatus status) {
     this->status = status;
     if (this->status == OFF) this->setBrightness(BRIGHTNESS_OFF);
+    this->lastUpdateMillis = millis();
 }
 
 void Device::setBrightness(DimmerBrightness brightness) {
     this->brightness = brightness;
+    this->lastUpdateMillis = millis();
 }
 
 void Device::toggleStatus() {
-    Serial.print("Current device status: ");
-    Serial.println(Device::getStatusAsString(status));
-
     switch (status) {
         case UNDEFINED:
             setStatus(UNDEFINED);
@@ -172,9 +176,6 @@ void Device::toggleStatus() {
             setBrightness(BRIGHTNESS_OFF);
             break;
     }
-
-    Serial.print("New device status: ");
-    Serial.println(Device::getStatusAsString(status));
 }
 
 void Device::toSerial() {
@@ -217,6 +218,7 @@ void Device::copy(const Device* d) {
     this->setMode(d->getMode());
     this->setStatus(d->getStatus());
     this->setBrightness(d->getBrightness());
+    this->lastUpdateMillis = d->lastUpdateMillis;
 }
 
 // Static - Get device from a given list of devices

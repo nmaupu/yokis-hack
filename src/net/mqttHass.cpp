@@ -20,7 +20,7 @@ char* MqttHass::newMessageJson(const Device* device) {
                                              // of the device
                 "\"on_command_type\":\"brightness\","  // only send brightness
                 "\"bri_cmd_t\":\"~cmnd/BRIGHTNESS\","
-                "\"bri_scl\":\"3\","  // 0=toggle, 1=min, 2=mid, 3=max
+                "\"bri_scl\":\"4\","  // 0=toggle, 1=min, 2=mid, 3/4=max
                 "\"bri_stat_t\":\"~tele/BRIGHTNESS\","
                 "\"bri_val_tpl\":\"{{value_json.BRIGHTNESS}}\","
                 "\"cmd_t\":\"~cmnd/POWER\","

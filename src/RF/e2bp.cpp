@@ -41,9 +41,9 @@ bool E2bp::setDeviceStatus(DeviceStatus ds) {
         return toggle();
     } else if (device->getMode() == DIMMER) {
         if (ds == ON) {
-            // To be sure it's ON, set to mid (3 pulses)
-            // HASS will set brightness to max when powered on though
-            return dimmerMid();
+            // To be sure it's ON, set to max (2 pulses)
+            // (HASS will set brightness to max when clicking power ON button)
+            return dimmerMax();
         } else {
             // To be sure it's OFF, set to max and toggle
             dimmerMax();
