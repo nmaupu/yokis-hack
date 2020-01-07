@@ -39,9 +39,9 @@ char* MqttHass::newMessageJson(const Device* device) {
                 "},"
                 "\"~\":\"%s/\""
                 "}",
-                device->getDeviceName(), device->getDeviceName(),
-                device->getDeviceName(), device->getDeviceName(),
-                device->getDeviceName());
+                device->getName(), device->getName(),
+                device->getName(), device->getName(),
+                device->getName());
     } else {
         sprintf(bufMessage,
                 "{"
@@ -65,9 +65,9 @@ char* MqttHass::newMessageJson(const Device* device) {
                 "},"
                 "\"~\":\"%s/\""
                 "}",
-                device->getDeviceName(), device->getDeviceName(),
-                device->getDeviceName(), device->getDeviceName(),
-                device->getDeviceName());
+                device->getName(), device->getName(),
+                device->getName(), device->getName(),
+                device->getName());
     }
 
     ret = new char[strlen(bufMessage) + 1];
@@ -80,7 +80,7 @@ char* MqttHass::newPublishTopic(const Device* device) {
     char* ret;
 
     sprintf(bufTopic, "%s/light/%s/config", HASS_PREFIX,
-            device->getDeviceName());
+            device->getName());
 
     ret = new char[strlen(bufTopic) + 1];
     strcpy(ret, bufTopic);
@@ -112,7 +112,7 @@ bool MqttHass::publishDevice(const Device* device) {
 void MqttHass::notifyOnline(const Device* device) {
     char buf[64];
 
-    sprintf(buf, "%s/tele/LWT", device->getDeviceName());
+    sprintf(buf, "%s/tele/LWT", device->getName());
     publish(buf, "Online", true);
 
     notifyPower(device, OFF);  // default status to OFF
@@ -126,7 +126,7 @@ void MqttHass::notifyPower(const Device* device, DeviceStatus ds) {
     char buf[64];
     char bufPayload[64];
 
-    sprintf(buf, "%s/tele/STATE", device->getDeviceName());
+    sprintf(buf, "%s/tele/STATE", device->getName());
     sprintf(bufPayload, "{\"POWER\":\"%s\"}", Device::getStatusAsString(ds));
     publish(buf, bufPayload, false);
 }
@@ -137,7 +137,7 @@ void MqttHass::notifyBrightness(const Device* device) {
 
     notifyPower(device, (device->getBrightness() == BRIGHTNESS_OFF ? OFF : ON));
 
-    sprintf(buf, "%s/tele/BRIGHTNESS", device->getDeviceName());
+    sprintf(buf, "%s/tele/BRIGHTNESS", device->getName());
     sprintf(bufPayload, "{\"BRIGHTNESS\":\"%d\"}", device->getBrightness());
     publish(buf, bufPayload, false);
 }
@@ -147,12 +147,12 @@ void MqttHass::subscribeDevice(const Device* device) {
     char buf[64];
 
     if (device->getMode() == ON_OFF || device->getMode() == NO_RCPT) {
-        sprintf(buf, "%s/cmnd/POWER", device->getDeviceName());
+        sprintf(buf, "%s/cmnd/POWER", device->getName());
         this->subscribe(buf);
     } else if (device->getMode() == DIMMER) {
-        sprintf(buf, "%s/cmnd/POWER", device->getDeviceName());
+        sprintf(buf, "%s/cmnd/POWER", device->getName());
         this->subscribe(buf);
-        sprintf(buf, "%s/cmnd/BRIGHTNESS", device->getDeviceName());
+        sprintf(buf, "%s/cmnd/BRIGHTNESS", device->getName());
         this->subscribe(buf);
     }
 }

@@ -9,6 +9,7 @@
 #ifdef ESP8266
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
+#include <Ticker.h>
 #include "net/mqttHass.h"
 #include "net/wifi.h"
 #endif
@@ -26,10 +27,14 @@ Device* devices[MQTT_MAX_NUM_OF_YOKIS_DEVICES];
 #endif
 IrqType IrqManager::irqType = PAIRING;
 Device* currentDevice;
+
 #define CURRENT_DEVICE_DEFAULT_NAME "tempDevice"
+#define MUTEX_TIMEOUT 200
 
 // MQTT configuration via compile options for ESP8266
 #ifdef ESP8266
+
+Ticker* deviceStatusPollers[MQTT_MAX_NUM_OF_YOKIS_DEVICES];
 
 // Don't update the same device during the MQTT_UPDATE_MILLIS_WINDOW
 // time window !
@@ -63,7 +68,7 @@ char mqttPassword[] = MQTT_PASSWORD;
 char mqttPassword[] = "password";
 #endif
 
-bool initMqtt = false;
+bool mqttInit = false;
 #endif
 
 // Callback functions
@@ -75,6 +80,7 @@ bool scannerCallback(const char*);
 bool displayDevices(const char*);
 bool pressCallback(const char*);
 bool releaseCallback(const char*);
+bool statusCallback(const char*);
 bool dimmerMemCallback(const char*);
 bool dimmerMaxCallback(const char*);
 bool dimmerMidCallback(const char*);
@@ -89,6 +95,8 @@ bool displayConfig(const char*);
 bool reloadConfig(const char*);
 bool deleteFromConfig(const char*);
 Device* getDeviceFromParams(const char*);
+void pollDevice(Device* device); // Interrupt func
+void pollForStatus(Device* device);
 void mqttCallback(char*, uint8_t*, unsigned int);
 #endif
 
@@ -134,6 +142,8 @@ void setup() {
         "press", "Press and hold an e2bp button", pressCallback));
     g_serial->registerCallback(new GenericCallback(
         "release", "Release an e2bp button", releaseCallback));
+    g_serial->registerCallback(new GenericCallback(
+        "status", "Status implementation test", statusCallback));
     g_serial->registerCallback(new GenericCallback(
         "dimmem", "Set a dimmer to memory (= 1 button pushes)",
         dimmerMemCallback));
@@ -181,13 +191,13 @@ void loop() {
 #if defined(ESP8266)
     g_mqtt->loop();
 
-    if (!initMqtt) {
+    if (!mqttInit) {
         Serial.print("Publishing homeassistant discovery data... ");
         for (uint8_t i = 0; i < MQTT_MAX_NUM_OF_YOKIS_DEVICES; i++) {
             if (devices[i] != NULL) {
                 if (g_mqtt->publishDevice(devices[i])) {
                     g_mqtt->subscribeDevice(devices[i]);
-                    initMqtt = true;
+                    mqttInit = true;
                 } else {
                     Serial.println("KO");
                     break;
@@ -195,7 +205,17 @@ void loop() {
             }
         }
 
-        if (initMqtt) Serial.println("OK");
+        if (mqttInit) Serial.println("OK");
+    } else {
+        // Verify polling statuses and update via MQTT if needed
+        for (uint8_t i = 0; i < MQTT_MAX_NUM_OF_YOKIS_DEVICES; i++) {
+            if (devices[i] != NULL && devices[i]->needsPolling()) {
+                //devices[i]->pollingFinished();
+                pollForStatus(devices[i]);
+                //Serial.print("Polling device ");
+                //Serial.println(devices[i]->getName());
+            }
+        }
     }
 #endif
     g_serial->readFromSerial();
@@ -286,6 +306,7 @@ bool offCallback(const char* params) {
 }
 
 bool scannerCallback(const char* params) {
+    // TODO: prevent scanner to function if polling is enabled
     Device* d = getDeviceFromParams(params);
 
     if (d == NULL || d->getHardwareAddress() == NULL) {
@@ -349,7 +370,8 @@ bool pressCallback(const char* params) {
     g_bp->setDevice(d);
     g_bp->reset();
     g_bp->setupRFModule();
-    return g_bp->press();
+    bool ret = g_bp->press();
+    return ret;
 }
 
 bool releaseCallback(const char* params) {
@@ -364,7 +386,26 @@ bool releaseCallback(const char* params) {
     g_bp->setDevice(d);
     g_bp->reset();
     g_bp->setupRFModule();
-    return g_bp->release();
+    bool ret = g_bp->release();
+    return ret;
+}
+
+bool statusCallback(const char* params) {
+    Device* d = getDeviceFromParams(params);
+
+    if (d == NULL || d->getHardwareAddress() == NULL) {
+        Serial.println("No such device");
+        return false;
+    }
+
+    IrqManager::irqType = E2BP;
+    g_bp->setDevice(d);
+    DeviceStatus st = g_bp->pollForStatus();
+
+    Serial.print("Device Status = ");
+    Serial.println(Device::getStatusAsString(st));
+
+    return true;
 }
 
 #ifdef ESP8266
@@ -379,7 +420,7 @@ bool storeConfigCallback(const char* params) {
     paramsBak[len] = 0;
     strtok(paramsBak, " ");   // ignore the command name
     pch = strtok(NULL, " ");  // get the name of the device
-    currentDevice->setDeviceName(pch);
+    currentDevice->setName(pch);
 
     pch = strtok(NULL, " ");  // Get the device mode
     if (pch != NULL) {
@@ -390,7 +431,7 @@ bool storeConfigCallback(const char* params) {
     if (ret) Serial.println("Saved.");
 
     // reset default name
-    currentDevice->setDeviceName(CURRENT_DEVICE_DEFAULT_NAME);
+    currentDevice->setName(CURRENT_DEVICE_DEFAULT_NAME);
 
     delete[] paramsBak;
     return ret;
@@ -408,10 +449,22 @@ bool displayConfig(const char*) {
 
 bool reloadConfig(const char*) {
     for (uint8_t i = 0; i < MQTT_MAX_NUM_OF_YOKIS_DEVICES; i++) {
-        delete (devices[i]);  // delete previously allocated device if needed
+        delete devices[i];  // delete previously allocated device if needed
+        if (deviceStatusPollers[i] != NULL) deviceStatusPollers[i]->detach();
+        delete deviceStatusPollers[i];
         devices[i] = NULL;
+        deviceStatusPollers[i] = NULL;
     }
     Device::loadFromSpiffs(devices, MQTT_MAX_NUM_OF_YOKIS_DEVICES);
+
+    // Reattach tickers to devices
+    for (uint8_t i = 0; i < MQTT_MAX_NUM_OF_YOKIS_DEVICES; i++) {
+        if (devices[i] != NULL) {
+            deviceStatusPollers[i] = new Ticker();
+            deviceStatusPollers[i]->attach_ms(random(3000, 6000),
+                                              pollDevice, devices[i]);
+        }
+    }
     Serial.println("Reloaded.");
     return true;
 }
@@ -431,6 +484,28 @@ bool deleteFromConfig(const char* params) {
 
     delete[] paramsBak;
     return true;
+}
+
+// Interrupt function
+void pollDevice(Device* d) { d->pollMePlease(); }
+
+void pollForStatus(Device* d) {
+    IrqManager::irqType = E2BP;
+    g_bp->setDevice(d);
+    DeviceStatus ds = g_bp->pollForStatus();
+    d->pollingFinished();
+
+    if (d->getStatus() != ds && ds != UNDEFINED) {
+        d->setStatus(ds);
+
+        if (d->getMode() == DIMMER) {
+            if (ds == ON && d->getBrightness() == 0)
+                d->setBrightness(BRIGHTNESS_MAX);
+            g_mqtt->notifyBrightness(d);
+        } else {
+            g_mqtt->notifyPower(d);
+        }
+    }
 }
 
 void mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
@@ -458,7 +533,8 @@ void mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
     // If we update this device too soon, ignore the payload
     unsigned long now = millis();
     if (d->getLastUpdateMillis() + MQTT_UPDATE_MILLIS_WINDOW > now) {
-        Serial.println("Ignoring MQTT message: received too soon for this device");
+        Serial.println(
+            "Ignoring MQTT message: received too soon for this device");
         Serial.print("Last update: ");
         Serial.println(d->getLastUpdateMillis(), DEC);
         Serial.print("This update: ");
@@ -484,7 +560,7 @@ void mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
     strncpy(mPayload, (char*)payload, length);  // consider payload as char*
     mPayload[length] = 0;
 
-    // Process MQTT message
+    // Processing MQTT message
     IrqManager::irqType = E2BP;
     g_bp->setDevice(d);
     switch (d->getMode()) {
@@ -500,10 +576,10 @@ void mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
             break;
         case DIMMER:
             // brightness will be 0 for anything that is not a number
-            // so will set light to OFF for all possible POWER cases (ON OR OFF)
-            // HASS will send only POWER OFF, never POWER ON
-            // because on_command_type=brightness set
-            // on MQTT configuration (see MqttHass class)
+            // so will set light to OFF for all possible POWER cases (ON OR
+            // OFF) HASS will send only POWER OFF, never POWER ON because
+            // on_command_type=brightness set on MQTT configuration (see
+            // MqttHass class)
             int brightness = (uint8_t)atoi(mPayload);
 
             switch (brightness) {
@@ -516,7 +592,7 @@ void mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
                 case BRIGHTNESS_MID:
                     g_bp->dimmerMid();
                     break;
-                default: // MAX values
+                default:  // MAX values
                     g_bp->dimmerMax();
                     break;
             }

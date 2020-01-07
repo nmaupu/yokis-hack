@@ -33,7 +33,7 @@ enum DimmerBrightness {
 
 class Device {
    private:
-    char* deviceName;
+    char* name;
     uint8_t* hardwareAddress;
     uint8_t channel;
     uint8_t beginPacket;
@@ -44,6 +44,7 @@ class Device {
     DeviceStatus status;
     DimmerBrightness brightness; // only for dimmer device
     unsigned long lastUpdateMillis;
+    bool hasToBePolledForStatus;
 
 #ifdef ESP8266
     static bool spiffsInitialized;
@@ -69,7 +70,7 @@ class Device {
     ~Device();
 
     // Getters
-    const char* getDeviceName() const;
+    const char* getName() const;
     const uint8_t* getHardwareAddress() const;
     uint8_t getChannel() const;
     uint8_t getBeginPacket() const;
@@ -81,10 +82,11 @@ class Device {
     const DimmerBrightness getBrightness() const;
     // Last time device status was updated
     const unsigned long getLastUpdateMillis() const;
+    bool needsPolling();
     static const char* getStatusAsString(DeviceStatus status);
 
     // Setters
-    void setDeviceName(const char*);
+    void setName(const char*);
     void setBeginPacket(uint8_t);
     void setEndPacket(uint8_t);
     void setVersion(const uint8_t*);
@@ -99,7 +101,8 @@ class Device {
     void setMode(const char*);
     void setStatus(DeviceStatus);
     void setBrightness(DimmerBrightness);
-    void setLastUpdateMillis(const unsigned long);
+    void pollMePlease();
+    void pollingFinished();
 
     // misc
     void toSerial();

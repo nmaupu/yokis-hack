@@ -20,6 +20,7 @@ class E2bp : public RFConfigurator {
     bool setDeviceStatus(DeviceStatus);
     void getFirstPayload(uint8_t *);
     void getSecondPayload(uint8_t *);
+    void getStatusPayload(uint8_t *);
 
    protected:
     bool runMainLoop();
@@ -56,9 +57,12 @@ class E2bp : public RFConfigurator {
     void reset();
     void setupRFModule() override;
     DeviceStatus getLastKnownDeviceStatus();
+    // Get the device status (ON or OFF) - experimental !
+    DeviceStatus pollForStatus();
     void interruptTxOk() override;
     void interruptRxReady() override;
     void interruptTxFailed() override;
+
 
     // Getters / setters
     void setDevice(Device *);

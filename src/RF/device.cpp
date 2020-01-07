@@ -16,8 +16,8 @@
 #endif
 
 Device::Device(const char* dname) {
-    this->deviceName = NULL;
-    this->setDeviceName(dname);
+    this->name = NULL;
+    this->setName(dname);
     this->hardwareAddress =
         (uint8_t*)malloc(HARDWARE_ADDRESS_LENGTH * sizeof(uint8_t));
     this->beginPacket = YOKIS_DEFAULT_BEGIN_PACKET;
@@ -28,9 +28,10 @@ Device::Device(const char* dname) {
     this->setStatus(UNDEFINED);
     brightness = BRIGHTNESS_OFF;
     this->lastUpdateMillis = 0;
+    this->hasToBePolledForStatus = false;
 }
 
-Device::Device(const Device* device) : Device(device->deviceName) {
+Device::Device(const Device* device) : Device(device->name) {
     this->copy(device);
 }
 
@@ -48,11 +49,11 @@ Device::Device(const char* dname, const uint8_t* hwAddr, uint8_t channel,
 }
 
 Device::~Device() {
-    free(this->deviceName);
+    free(this->name);
     free(this->hardwareAddress);
 }
 
-const char* Device::getDeviceName() const { return this->deviceName; }
+const char* Device::getName() const { return this->name; }
 
 const uint8_t* Device::getHardwareAddress() const {
     return this->hardwareAddress;
@@ -78,6 +79,8 @@ const unsigned long Device::getLastUpdateMillis() const {
     return lastUpdateMillis;
 }
 
+bool Device::needsPolling() { return hasToBePolledForStatus; }
+
 // static
 const char* Device::getStatusAsString(DeviceStatus status) {
     switch (status) {
@@ -92,10 +95,10 @@ const char* Device::getStatusAsString(DeviceStatus status) {
     return NULL;
 }
 
-void Device::setDeviceName(const char* dname) {
+void Device::setName(const char* dname) {
     if (dname != NULL) {
-        this->deviceName = (char*)realloc(this->deviceName, strlen(dname) + 1);
-        strcpy(this->deviceName, dname);
+        this->name = (char*)realloc(this->name, strlen(dname) + 1);
+        strcpy(this->name, dname);
     }
 }
 
@@ -163,6 +166,10 @@ void Device::setBrightness(DimmerBrightness brightness) {
     this->lastUpdateMillis = millis();
 }
 
+void Device::pollMePlease() { this->hasToBePolledForStatus = true; }
+
+void Device::pollingFinished() { this->hasToBePolledForStatus = false; }
+
 void Device::toggleStatus() {
     switch (status) {
         case UNDEFINED:
@@ -179,7 +186,7 @@ void Device::toggleStatus() {
 }
 
 void Device::toSerial() {
-    Serial.print(deviceName);
+    Serial.print(name);
     Serial.print(" - status=");
     Serial.println(Device::getStatusAsString(status));
     Serial.print("mode: ");
@@ -208,7 +215,7 @@ void Device::toSerial() {
 
 // Copy all fields from given device to this device
 void Device::copy(const Device* d) {
-    this->setDeviceName(d->getDeviceName());
+    this->setName(d->getName());
     this->setHardwareAddress(d->getHardwareAddress());
     this->setChannel(d->getChannel());
     this->setBeginPacket(d->getBeginPacket());
@@ -232,7 +239,7 @@ Device* Device::getFromList(Device** devices, size_t size,
 
     for (unsigned int i = 0; i < size; i++) {
         if (devices[i] != NULL &&
-            strcmp(devices[i]->getDeviceName(), deviceName) == 0) {
+            strcmp(devices[i]->getName(), deviceName) == 0) {
             d = devices[i];
             break;
         }
@@ -263,7 +270,7 @@ bool Device::saveToSpiffs() {
 
     // Search for this device if it is already stored
     // delete the line if found
-    int line = Device::findInConfig(deviceName);
+    int line = Device::findInConfig(name);
     Device::deleteLineInConfig(line);
 
     File f = SPIFFS.open(SPIFFS_CONFIG_FILENAME, "a+");
@@ -275,9 +282,9 @@ bool Device::saveToSpiffs() {
 
     char buf[128];
     sprintf(buf, "%s%s%02x%02x%s%02x%s%02x%s%02x%s%02x%02x%02x%s%02x%02x%s%04d",
-            deviceName, SEP, hardwareAddress[0], hardwareAddress[1], SEP,
-            channel, SEP, beginPacket, SEP, endPacket, SEP, version[0],
-            version[1], version[2], SEP, serial[0], serial[1], SEP, mode);
+            name, SEP, hardwareAddress[0], hardwareAddress[1], SEP, channel,
+            SEP, beginPacket, SEP, endPacket, SEP, version[0], version[1],
+            version[2], SEP, serial[0], serial[1], SEP, mode);
     int bytesWritten = f.println(buf);
     if (bytesWritten <= 0) {
         Serial.print(SPIFFS_CONFIG_FILENAME);
@@ -368,7 +375,7 @@ void Device::loadFromSpiffs(Device** devices, const unsigned int size) {
         // Store this device
         devices[numLines++] = d;
         Serial.print("Added new device: ");
-        Serial.println(d->getDeviceName());
+        Serial.println(d->getName());
     }
 
     f.close();
