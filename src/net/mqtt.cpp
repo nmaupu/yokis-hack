@@ -74,11 +74,12 @@ boolean Mqtt::loop() {
     return PubSubClient::loop();
 }
 
+// static - default callback logging on Serial
 void Mqtt::callback(char* topic, uint8_t* payload, unsigned int length) {
-    Serial.print("Message arrived in topic: ");
+    Serial.print("Message topic: ");
     Serial.println(topic);
 
-    Serial.print("Message:");
+    Serial.print("Message payload: ");
     for (unsigned int i = 0; i < length; i++) {
         Serial.print((char)payload[i]);
     }

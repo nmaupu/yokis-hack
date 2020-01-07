@@ -9,8 +9,3 @@ GenericCallback::GenericCallback(const char* command, const char* help, bool (*c
 bool GenericCallback::commandCallback(const char* params) {
     return this->callback(params);
 }
-
-// static
-char* GenericCallback::getNextParam(char* param) {
-    return strtok(param, " ");
-}

@@ -20,17 +20,31 @@ Device::Device(const char* dname) {
     this->setDeviceName(dname);
     this->hardwareAddress =
         (uint8_t*)malloc(HARDWARE_ADDRESS_LENGTH * sizeof(uint8_t));
-    this->beginPacket = YOKIS_BEGIN_PACKET;
-    this->endPacket = YOKIS_END_PACKET;
+    this->beginPacket = YOKIS_DEFAULT_BEGIN_PACKET;
+    this->endPacket = YOKIS_DEFAULT_END_PACKET;
+    memset(this->serial, 0, 2 * sizeof(uint8_t));
+    memset(this->version, 0, 3 * sizeof(uint8_t));
+    this->setMode(ON_OFF);  // most used devices AFAIK
+    this->setStatus(UNDEFINED);
+    brightness = BRIGHTNESS_OFF;
+    this->lastUpdateMillis = 0;
 }
 
 Device::Device(const Device* device) : Device(device->deviceName) {
     this->copy(device);
 }
 
-Device::Device(const char* dname, const uint8_t* hwAddr, uint8_t channel) : Device(dname) {
+Device::Device(const char* dname, const uint8_t* hwAddr, uint8_t channel)
+    : Device(dname) {
     this->setHardwareAddress(hwAddr);
     this->setChannel(channel);
+}
+
+Device::Device(const char* dname, const uint8_t* hwAddr, uint8_t channel,
+               const uint8_t* serial, const uint8_t* version)
+    : Device(dname, hwAddr, channel) {
+    this->setSerial(serial);
+    this->setVersion(version);
 }
 
 Device::~Device() {
@@ -39,13 +53,6 @@ Device::~Device() {
 }
 
 const char* Device::getDeviceName() const { return this->deviceName; }
-
-void Device::setDeviceName(const char* dname) {
-    if (dname != NULL) {
-        this->deviceName = (char*)realloc(this->deviceName, strlen(dname) + 1);
-        strcpy(this->deviceName, dname);
-    }
-}
 
 const uint8_t* Device::getHardwareAddress() const {
     return this->hardwareAddress;
@@ -57,23 +64,63 @@ uint8_t Device::getBeginPacket() const { return this->beginPacket; }
 
 uint8_t Device::getEndPacket() const { return this->endPacket; }
 
+const uint8_t* Device::getVersion() const { return this->version; }
+
+const uint8_t* Device::getSerial() const { return this->serial; }
+
+const DeviceMode Device::getMode() const { return mode; }
+
+const DeviceStatus Device::getStatus() const { return status; }
+
+const DimmerBrightness Device::getBrightness() const { return brightness; }
+
+const unsigned long Device::getLastUpdateMillis() const {
+    return lastUpdateMillis;
+}
+
+// static
+const char* Device::getStatusAsString(DeviceStatus status) {
+    switch (status) {
+        case ON:
+            return "ON";
+        case OFF:
+            return "OFF";
+        case UNDEFINED:
+            return "UNDEFINED";
+    }
+
+    return NULL;
+}
+
+void Device::setDeviceName(const char* dname) {
+    if (dname != NULL) {
+        this->deviceName = (char*)realloc(this->deviceName, strlen(dname) + 1);
+        strcpy(this->deviceName, dname);
+    }
+}
+
 void Device::setBeginPacket(uint8_t p) { this->beginPacket = p; }
 
 void Device::setEndPacket(uint8_t p) { this->endPacket = p; }
 
 void Device::setHardwareAddress(const uint8_t* hwAddr) {
     if (hwAddr != NULL) {
-        memcpy(this->hardwareAddress, hwAddr, HARDWARE_ADDRESS_LENGTH);
+        memcpy(this->hardwareAddress, hwAddr,
+               HARDWARE_ADDRESS_LENGTH * sizeof(uint8_t));
     }
 }
 
 void Device::setHardwareAddress(const char* hw) {
     uint8_t b1, b2;
     char buf[3];
+
+    buf[2] = 0;  // null terminate in advance
+
     strncpy(buf, hw, 2);
     b1 = (uint8_t)strtoul(buf, NULL, 16);
     strncpy(buf, hw + 2, 2);
     b2 = (uint8_t)strtoul(buf, NULL, 16);
+
     this->hardwareAddress[0] = b1;
     this->hardwareAddress[1] = b2;
     this->hardwareAddress[2] = b1;
@@ -83,8 +130,60 @@ void Device::setHardwareAddress(const char* hw) {
 
 void Device::setChannel(uint8_t channel) { this->channel = channel; }
 
-void Device::printDebugInfo() {
-    Serial.println(deviceName);
+void Device::setVersion(const uint8_t* version) {
+    memcpy(this->version, version, 3 * sizeof(uint8_t));
+}
+
+void Device::setSerial(const uint8_t* serial) {
+    memcpy(this->serial, serial, 2 * sizeof(uint8_t));
+}
+
+void Device::setMode(DeviceMode mode) { this->mode = mode; }
+
+void Device::setMode(const char* mode) {
+    if (mode == NULL || strlen(mode) == 0) {
+        this->setMode(ON_OFF);
+    } else if (strcmp("DIMMER", mode) == 0) {
+        this->setMode(DIMMER);
+    } else if (strcmp("NO_RCPT", mode) == 0) {
+        this->setMode(NO_RCPT);
+    } else {
+        this->setMode(ON_OFF);
+    }
+}
+
+void Device::setStatus(DeviceStatus status) {
+    this->status = status;
+    if (this->status == OFF) this->setBrightness(BRIGHTNESS_OFF);
+    this->lastUpdateMillis = millis();
+}
+
+void Device::setBrightness(DimmerBrightness brightness) {
+    this->brightness = brightness;
+    this->lastUpdateMillis = millis();
+}
+
+void Device::toggleStatus() {
+    switch (status) {
+        case UNDEFINED:
+            setStatus(UNDEFINED);
+            break;
+        case OFF:
+            setStatus(ON);
+            break;
+        case ON:
+            setStatus(OFF);
+            setBrightness(BRIGHTNESS_OFF);
+            break;
+    }
+}
+
+void Device::toSerial() {
+    Serial.print(deviceName);
+    Serial.print(" - status=");
+    Serial.println(Device::getStatusAsString(status));
+    Serial.print("mode: ");
+    Serial.println(mode);
     Serial.print("hw: ");
     Serial.print(hardwareAddress[0], HEX);
     Serial.print(" ");
@@ -95,6 +194,16 @@ void Device::printDebugInfo() {
     Serial.print(beginPacket, HEX);
     Serial.print(" ");
     Serial.println(endPacket, HEX);
+    Serial.print("serial/version: ");
+    Serial.print(serial[0], HEX);
+    Serial.print(" ");
+    Serial.print(serial[1], HEX);
+    Serial.print("/");
+    Serial.print(version[0], HEX);
+    Serial.print(" ");
+    Serial.print(version[1], HEX);
+    Serial.print(" ");
+    Serial.println(version[2], HEX);
 }
 
 // Copy all fields from given device to this device
@@ -104,6 +213,12 @@ void Device::copy(const Device* d) {
     this->setChannel(d->getChannel());
     this->setBeginPacket(d->getBeginPacket());
     this->setEndPacket(d->getEndPacket());
+    this->setVersion(d->getVersion());
+    this->setSerial(d->getSerial());
+    this->setMode(d->getMode());
+    this->setStatus(d->getStatus());
+    this->setBrightness(d->getBrightness());
+    this->lastUpdateMillis = d->lastUpdateMillis;
 }
 
 // Static - Get device from a given list of devices
@@ -159,9 +274,10 @@ bool Device::saveToSpiffs() {
     }
 
     char buf[128];
-    sprintf(buf, "%s%s%02x%02x%s%02x%s%02x%s%02x", deviceName, SEP,
-            hardwareAddress[0], hardwareAddress[1], SEP, channel, SEP,
-            beginPacket, SEP, endPacket);
+    sprintf(buf, "%s%s%02x%02x%s%02x%s%02x%s%02x%s%02x%02x%02x%s%02x%02x%s%04d",
+            deviceName, SEP, hardwareAddress[0], hardwareAddress[1], SEP,
+            channel, SEP, beginPacket, SEP, endPacket, SEP, version[0],
+            version[1], version[2], SEP, serial[0], serial[1], SEP, mode);
     int bytesWritten = f.println(buf);
     if (bytesWritten <= 0) {
         Serial.print(SPIFFS_CONFIG_FILENAME);
@@ -173,12 +289,20 @@ bool Device::saveToSpiffs() {
     return ret;
 }
 
+// Static - delete a device from SPIFFS configuration
+void Device::deleteFromConfig(const char* deviceName) {
+    int line = Device::findInConfig(deviceName);
+    if (line != -1) Device::deleteLineInConfig(line);
+}
+
 // Static - load devices previously stored in the SPIFFS memory area
 void Device::loadFromSpiffs(Device** devices, const unsigned int size) {
     char buf[128];
     char* tok;
     uint16_t numLines = 0;
     Device* d = NULL;
+    char uCharBuf[3];
+    uint8_t uIntBuf[3];
 
     Device::spiffsInit();
 
@@ -189,10 +313,13 @@ void Device::loadFromSpiffs(Device** devices, const unsigned int size) {
         return;
     }
 
+    // null terminate in advance
+    uCharBuf[2] = 0;
+
     while (f.available()) {
         if (numLines >= size) break;
 
-        int l = f.readBytesUntil('\n', buf, sizeof(buf));
+        int l = f.readBytesUntil('\n', buf, sizeof(buf) - 1);
         buf[l] = 0;
 
         tok = strtok(buf, SEP);  // device name
@@ -210,6 +337,33 @@ void Device::loadFromSpiffs(Device** devices, const unsigned int size) {
 
         tok = strtok(NULL, SEP);  // end packet represented as 2 chars
         d->setEndPacket((uint8_t)strtoul(tok, NULL, 16));
+
+        tok = strtok(NULL, SEP);  // version represented as 6 chars
+        if (tok != NULL) {
+            strncpy(uCharBuf, tok, 2);
+            uIntBuf[0] = (uint8_t)strtoul(uCharBuf, NULL, 16);
+            strncpy(uCharBuf, tok + 2, 2);
+            uIntBuf[1] = (uint8_t)strtoul(uCharBuf, NULL, 16);
+            strncpy(uCharBuf, tok + 4, 2);
+            uIntBuf[2] = (uint8_t)strtoul(uCharBuf, NULL, 16);
+
+            d->setVersion(uIntBuf);
+        }
+
+        tok = strtok(NULL, SEP);  // Serial represented as 4 chars
+        if (tok != NULL) {
+            strncpy(uCharBuf, tok, 2);
+            uIntBuf[0] = (uint8_t)strtoul(uCharBuf, NULL, 16);
+            strncpy(uCharBuf, tok + 2, 2);
+            uIntBuf[1] = (uint8_t)strtoul(uCharBuf, NULL, 16);
+
+            d->setSerial(uIntBuf);
+        }
+
+        tok = strtok(NULL, SEP);  // Mode represented as 4 chars
+        if (tok != NULL) {
+            d->setMode((DeviceMode)strtoul(tok, NULL, 16));
+        }
 
         // Store this device
         devices[numLines++] = d;
@@ -240,19 +394,22 @@ void Device::clearConfigFromSpiffs() {
 
 // static
 int Device::findInConfig(const char* deviceName) {
+    if (deviceName == NULL) return -1;
+
     Device::spiffsInit();
-    int found = -1;
     int currentLine = 1;
     char buf[128];
     char* tok;
+    int found = -1;
+
     File f = SPIFFS.open(SPIFFS_CONFIG_FILENAME, "r");
     if (!f) {
         Serial.println("File open failed");
-        return found;
+        return -1;
     }
 
     while (f.available()) {
-        int l = f.readBytesUntil('\n', buf, sizeof(buf));
+        int l = f.readBytesUntil('\n', buf, sizeof(buf) - 1);
         buf[l] = 0;
         tok = strtok(buf, SEP);
         if (tok != NULL && strcmp(tok, deviceName) == 0) {
@@ -288,7 +445,7 @@ void Device::deleteLineInConfig(int line) {
     }
 
     while (f.available()) {
-        int l = f.readBytesUntil('\n', buf, sizeof(buf));
+        int l = f.readBytesUntil('\n', buf, sizeof(buf) - 1);
         buf[l] = 0;
         if (currentLine++ != line) {
             int bytesWritten = fbak.println(buf);

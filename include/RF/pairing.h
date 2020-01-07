@@ -38,9 +38,13 @@ class Pairing : public RFConfigurator {
     // Try to receive info from Yokis device (after click on connect button)
     bool hackPairing();
     // Get device address from received data
-    void getAddressFromRecvData(byte*);
+    void getAddressFromRecvData(uint8_t buf[5]);
     // Get device channel from received data
     byte getChannelFromRecvData();
+    // Get device's version bytes - not sure what those bytes are for yet
+    void getVersionFromRecvData(uint8_t buf[3]);
+    // Get device's serial - not sure what those bytes are for yet
+    void getSerialFromRecvData(uint8_t buf[2]);
     // Serial print information received
     void printPairingInfo();
 };
