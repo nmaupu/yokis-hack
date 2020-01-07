@@ -13,55 +13,61 @@ char* MqttHass::newMessageJson(const Device* device) {
     char* ret;
 
     if (device->getMode() == DIMMER) {
-        sprintf(
-            bufMessage,
-            "{"
-            "\"name\":\"%s\","
-            "\"optimistic\":\"false\","  // if false, cannot know the status of
-                                         // the device
-            "\"on_command_type\":\"brightness\","  // only send brightness
-            "\"bri_cmd_t\":\"~cmnd/BRIGHTNESS\","
-            "\"bri_scl\":\"3\","  // 0=toggle, 1=min, 2=mid, 3=max
-            "\"bri_stat_t\":\"~tele/BRIGHTNESS\","
-            "\"bri_val_tpl\":\"{{value_json.BRIGHTNESS}}\","
-            "\"cmd_t\":\"~cmnd/POWER\","
-            "\"pl_off\":\"OFF\","
-            "\"stat_t\":\"~tele/STATE\","
-            "\"val_tpl\":\"{{value_json.POWER}}\","
-            "\"avty_t\":\"~tele/LWT\","
-            "\"pl_avail\":\"Online\","
-            "\"pl_not_avail\":\"Offline\","
-            "\"uniq_id\":\"%s\","
-            "\"device\":{\"identifiers\":[\"%s\"],\"cns\":[[\"ip\",\"%d.%d.%d.%"
-            "d\"]],\"mf\":\"Yokis\"},"
-            "\"~\":\"%s/\""
-            "}",
-            device->getDeviceName(), device->getDeviceName(),
-            device->getDeviceName(), WiFi.localIP()[0], WiFi.localIP()[1],
-            WiFi.localIP()[2], WiFi.localIP()[3], device->getDeviceName());
+        sprintf(bufMessage,
+                "{"
+                "\"name\":\"%s dimmer\","
+                "\"optimistic\":\"false\","  // if false, cannot know the status
+                                             // of the device
+                "\"on_command_type\":\"brightness\","  // only send brightness
+                "\"bri_cmd_t\":\"~cmnd/BRIGHTNESS\","
+                "\"bri_scl\":\"3\","  // 0=toggle, 1=min, 2=mid, 3=max
+                "\"bri_stat_t\":\"~tele/BRIGHTNESS\","
+                "\"bri_val_tpl\":\"{{value_json.BRIGHTNESS}}\","
+                "\"cmd_t\":\"~cmnd/POWER\","
+                "\"pl_off\":\"OFF\","
+                "\"state_topic\":\"~tele/STATE\","
+                "\"val_tpl\":\"{{value_json.POWER}}\","
+                "\"avty_t\":\"~tele/LWT\","
+                "\"pl_avail\":\"Online\","
+                "\"pl_not_avail\":\"Offline\","
+                "\"uniq_id\":\"esp-%s\","
+                "\"device\":{"
+                "\"name\":\"%s\","
+                "\"identifiers\":[\"esp-%s\"],"
+                "\"model\":\"MTV500ERX\","
+                "\"mf\":\"Yokis\""
+                "},"
+                "\"~\":\"%s/\""
+                "}",
+                device->getDeviceName(), device->getDeviceName(),
+                device->getDeviceName(), device->getDeviceName(),
+                device->getDeviceName());
     } else {
-        sprintf(
-            bufMessage,
-            "{"
-            "\"name\":\"%s\","
-            "\"optimistic\":\"false\","  // if false, cannot know the status of
-                                         // the device
-            "\"cmd_t\":\"~cmnd/POWER\","
-            "\"stat_t\":\"~tele/STATE\","
-            "\"val_tpl\":\"{{value_json.POWER}}\","
-            "\"pl_off\":\"OFF\","
-            "\"pl_on\":\"ON\","
-            "\"avty_t\":\"~tele/LWT\","
-            "\"pl_avail\":\"Online\","
-            "\"pl_not_avail\":\"Offline\","
-            "\"uniq_id\":\"%s\","
-            "\"device\":{\"identifiers\":[\"%s\"],\"cns\":[[\"ip\",\"%d.%d.%d.%"
-            "d\"]],\"mf\":\"Yokis\"},"
-            "\"~\":\"%s/\""
-            "}",
-            device->getDeviceName(), device->getDeviceName(),
-            device->getDeviceName(), WiFi.localIP()[0], WiFi.localIP()[1],
-            WiFi.localIP()[2], WiFi.localIP()[3], device->getDeviceName());
+        sprintf(bufMessage,
+                "{"
+                "\"name\":\"%s switch\","
+                "\"optimistic\":\"false\","  // if false, cannot know the status
+                                             // of the device
+                "\"cmd_t\":\"~cmnd/POWER\","
+                "\"state_topic\":\"~tele/STATE\","
+                "\"val_tpl\":\"{{value_json.POWER}}\","
+                "\"pl_off\":\"OFF\","
+                "\"pl_on\":\"ON\","
+                "\"avty_t\":\"~tele/LWT\","
+                "\"pl_avail\":\"Online\","
+                "\"pl_not_avail\":\"Offline\","
+                "\"uniq_id\":\"esp-%s\","
+                "\"device\":{"
+                "\"name\":\"%s\","
+                "\"identifiers\":[\"esp-%s\"],"
+                "\"model\":\"MTR2000ERX\","
+                "\"mf\":\"Yokis\""
+                "},"
+                "\"~\":\"%s/\""
+                "}",
+                device->getDeviceName(), device->getDeviceName(),
+                device->getDeviceName(), device->getDeviceName(),
+                device->getDeviceName());
     }
 
     ret = new char[strlen(bufMessage) + 1];
