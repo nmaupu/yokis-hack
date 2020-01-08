@@ -39,9 +39,8 @@ char* MqttHass::newMessageJson(const Device* device) {
                 "},"
                 "\"~\":\"%s/\""
                 "}",
-                device->getName(), device->getName(),
-                device->getName(), device->getName(),
-                device->getName());
+                device->getName(), device->getName(), device->getName(),
+                device->getName(), device->getName());
     } else {
         sprintf(bufMessage,
                 "{"
@@ -65,9 +64,8 @@ char* MqttHass::newMessageJson(const Device* device) {
                 "},"
                 "\"~\":\"%s/\""
                 "}",
-                device->getName(), device->getName(),
-                device->getName(), device->getName(),
-                device->getName());
+                device->getName(), device->getName(), device->getName(),
+                device->getName(), device->getName());
     }
 
     ret = new char[strlen(bufMessage) + 1];
@@ -79,8 +77,7 @@ char* MqttHass::newPublishTopic(const Device* device) {
     char bufTopic[128];
     char* ret;
 
-    sprintf(bufTopic, "%s/light/%s/config", HASS_PREFIX,
-            device->getName());
+    sprintf(bufTopic, "%s/light/%s/config", HASS_PREFIX, device->getName());
 
     ret = new char[strlen(bufTopic) + 1];
     strcpy(ret, bufTopic);
@@ -109,13 +106,19 @@ bool MqttHass::publishDevice(const Device* device) {
     return ret;
 }
 
-void MqttHass::notifyOnline(const Device* device) {
+void MqttHass::notifyAvailability(const Device* device, const char* status) {
     char buf[64];
 
     sprintf(buf, "%s/tele/LWT", device->getName());
-    publish(buf, "Online", true);
+    publish(buf, status, true);
+}
 
-    notifyPower(device, OFF);  // default status to OFF
+void MqttHass::notifyOnline(const Device* device) {
+    notifyAvailability(device, "Online");
+}
+
+void MqttHass::notifyOffline(const Device* device) {
+    notifyAvailability(device, "Offline");
 }
 
 void MqttHass::notifyPower(const Device* device) {

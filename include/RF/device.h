@@ -15,11 +15,9 @@ enum DeviceMode {
     NO_RCPT  // No reception, send blindly begin and end packets 30 times
 };
 
-enum DeviceStatus {
-    OFF = 0,
-    ON,
-    UNDEFINED
-};
+enum DeviceStatus { OFF = 0, ON, UNDEFINED };
+
+enum DeviceAvailability { OFFLINE = 0, ONLINE };
 
 // Note: There is not 3 because in HASS, we use 5 values to
 // have a slider with a 'middle' value.
@@ -42,7 +40,8 @@ class Device {
     uint8_t version[3];
     DeviceMode mode;
     DeviceStatus status;
-    DimmerBrightness brightness; // only for dimmer device
+    DeviceAvailability availability;
+    DimmerBrightness brightness;  // only for dimmer device
     unsigned long lastUpdateMillis;
     bool hasToBePolledForStatus;
 
@@ -80,10 +79,12 @@ class Device {
     const DeviceMode getMode() const;
     const DeviceStatus getStatus() const;
     const DimmerBrightness getBrightness() const;
+    const DeviceAvailability getAvailability() const;
     // Last time device status was updated
     const unsigned long getLastUpdateMillis() const;
     bool needsPolling();
     static const char* getStatusAsString(DeviceStatus status);
+    static const char* getAvailabilityAsString(DeviceAvailability);
 
     // Setters
     void setName(const char*);
@@ -101,6 +102,11 @@ class Device {
     void setMode(const char*);
     void setStatus(DeviceStatus);
     void setBrightness(DimmerBrightness);
+    void setAvailability(DeviceAvailability);
+    void online();
+    void offline();
+    bool isOnline();
+    bool isOffline();
     void pollMePlease();
     void pollingFinished();
 

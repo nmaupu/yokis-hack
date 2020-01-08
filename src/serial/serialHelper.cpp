@@ -1,7 +1,6 @@
 #include "serial/serialHelper.h"
-#include "serial/debugFlagCallback.h"
 #include "serial/displayConfigCallback.h"
-#include "serial/rawFlagCallback.h"
+#include "serial/flagCallback.h"
 #include "serial/usageCallback.h"
 
 SerialHelper::SerialHelper() {
@@ -13,11 +12,13 @@ SerialHelper::SerialHelper() {
     this->registerCallback(
         new UsageCallback("help", "display this help", this));
     this->registerCallback(
-        new DebugFlagCallback("debug", "toggle debug mode"));
+        new FlagCallback("debug", "toggle debug mode", FLAG_DEBUG));
+    this->registerCallback(
+        new FlagCallback("raw", "toggle raw / formatted output", FLAG_RAW));
+    this->registerCallback(
+        new FlagCallback("poll", "toggle devices polling for status", FLAG_POLLING));
     this->registerCallback(
         new DisplayConfigCallback("config", "print current config flags"));
-    this->registerCallback(
-        new RawFlagCallback("raw", "toggle raw / formatted output"));
 }
 
 bool SerialHelper::registerCallback(SerialCallback* callback) {
@@ -124,6 +125,8 @@ bool SerialHelper::displayConfig(void) {
     Serial.print(IS_DEBUG_ENABLED);
     Serial.print(" RAW=");
     Serial.print(FLAG_IS_ENABLED(FLAG_RAW));
+    Serial.print(" POLLING=");
+    Serial.print(FLAG_IS_ENABLED(FLAG_POLLING));
     Serial.println();
     return true;
 }

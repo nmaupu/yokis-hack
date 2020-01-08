@@ -2,6 +2,7 @@
 #define __GLOBALS_H__
 
 #include <Arduino.h>
+#include "RF/copy.h"
 #include "RF/e2bp.h"
 #include "RF/pairing.h"
 #include "RF/scanner.h"
@@ -46,12 +47,14 @@ extern SerialHelper* g_serial;
 extern Pairing* g_pairingRF;
 extern E2bp* g_bp;
 extern Scanner* g_scanner;
+extern Copy* g_copy;
 #ifdef ESP8266
 extern MqttHass* g_mqtt;
 #endif
 
-#define FLAG_DEBUG (1 << 0)
-#define FLAG_RAW   (1 << 1)
+#define FLAG_DEBUG   (1 << 0)
+#define FLAG_RAW     (1 << 1)
+#define FLAG_POLLING (1 << 2)
 
 // returns true if debug is enabled
 #define IS_DEBUG_ENABLED ((FLAG_IS_ENABLED(FLAG_DEBUG)))
