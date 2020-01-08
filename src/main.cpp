@@ -1,7 +1,9 @@
 #include <Arduino.h>
+#include "RF/copy.h"
 #include "RF/e2bp.h"
 #include "RF/irqManager.h"
 #include "RF/pairing.h"
+#include "RF/scanner.h"
 #include "globals.h"
 #include "printf.h"
 #include "serial/genericCallback.h"
@@ -15,11 +17,12 @@
 #endif
 
 // globals' initialization
-byte g_ConfigFlags = 0;
+byte g_ConfigFlags = ~FLAG_RAW & ~FLAG_DEBUG & FLAG_POLLING;
 SerialHelper* g_serial;
 Pairing* g_pairingRF;
 E2bp* g_bp;
 Scanner* g_scanner;
+Copy* g_copy;
 #ifdef ESP8266
 MqttHass* g_mqtt;
 // no need to store more devices than supported by MQTT
@@ -77,6 +80,7 @@ bool onCallback(const char*);
 bool offCallback(const char*);
 bool toggleCallback(const char*);
 bool scannerCallback(const char*);
+bool copyCallback(const char*);
 bool displayDevices(const char*);
 bool pressCallback(const char*);
 bool releaseCallback(const char*);
@@ -108,6 +112,7 @@ void setup() {
     g_pairingRF = new Pairing(CE_PIN, CSN_PIN);
     g_bp = new E2bp(CE_PIN, CSN_PIN);
     g_scanner = new Scanner(CE_PIN, CSN_PIN);
+    g_copy = new Copy(CE_PIN, CSN_PIN);
     currentDevice = new Device(CURRENT_DEVICE_DEFAULT_NAME);
 
 #ifdef ESP8266
@@ -131,7 +136,9 @@ void setup() {
                             "remote when a button is pressed then released",
                             toggleCallback));
     g_serial->registerCallback(new GenericCallback(
-        "scan", "Scan the network for packets", scannerCallback));
+        "scan", "Scan the network for packets - polling has to be disabled for this to work", scannerCallback));
+    g_serial->registerCallback(new GenericCallback(
+        "copy", "Copy a device to a pairing one (or disconnect if already configured)", copyCallback));
     g_serial->registerCallback(new GenericCallback(
         "dConfig", "display loaded config / current config", displayDevices));
     g_serial->registerCallback(new GenericCallback(
@@ -208,7 +215,7 @@ void loop() {
         if (mqttInit) Serial.println("OK");
     } else {
         // Verify polling statuses and update via MQTT if needed
-        for (uint8_t i = 0; i < MQTT_MAX_NUM_OF_YOKIS_DEVICES; i++) {
+        for (uint8_t i = 0; i < MQTT_MAX_NUM_OF_YOKIS_DEVICES && FLAG_IS_ENABLED(FLAG_POLLING); i++) {
             if (devices[i] != NULL && devices[i]->needsPolling()) {
                 //devices[i]->pollingFinished();
                 pollForStatus(devices[i]);
@@ -306,7 +313,11 @@ bool offCallback(const char* params) {
 }
 
 bool scannerCallback(const char* params) {
-    // TODO: prevent scanner to function if polling is enabled
+    if(FLAG_IS_ENABLED(FLAG_POLLING)) {
+        Serial.println("Disable polling before attempting to scan ! Aborting.");
+        return false;
+    }
+
     Device* d = getDeviceFromParams(params);
 
     if (d == NULL || d->getHardwareAddress() == NULL) {
@@ -319,6 +330,19 @@ bool scannerCallback(const char* params) {
     g_scanner->setupRFModule();
 
     return true;
+}
+
+bool copyCallback(const char* params) {
+    Device* d = getDeviceFromParams(params);
+
+    if (d == NULL || d->getHardwareAddress() == NULL) {
+        Serial.println("No such device");
+        return false;
+    }
+
+    IrqManager::irqType = COPYING;
+    g_copy->setDevice(d);
+    return g_copy->send();
 }
 
 bool displayDevices(const char*) {
@@ -487,7 +511,9 @@ bool deleteFromConfig(const char* params) {
 }
 
 // Interrupt function
-void pollDevice(Device* d) { d->pollMePlease(); }
+void pollDevice(Device* d) {
+    if (FLAG_IS_ENABLED(FLAG_POLLING)) d->pollMePlease();
+}
 
 void pollForStatus(Device* d) {
     IrqManager::irqType = E2BP;
@@ -495,16 +521,27 @@ void pollForStatus(Device* d) {
     DeviceStatus ds = g_bp->pollForStatus();
     d->pollingFinished();
 
-    if (d->getStatus() != ds && ds != UNDEFINED) {
-        d->setStatus(ds);
-
-        if (d->getMode() == DIMMER) {
-            if (ds == ON && d->getBrightness() == 0)
-                d->setBrightness(BRIGHTNESS_MAX);
-            g_mqtt->notifyBrightness(d);
-        } else {
-            g_mqtt->notifyPower(d);
+    if(ds != UNDEFINED) { // device reachable
+        if (d->isOffline()) {  // Device is back online
+            d->online();
+            g_mqtt->notifyOnline(d);
         }
+
+        // Update device status if changing
+        if (d->getStatus() != ds) {
+            d->setStatus(ds);
+            if (d->getMode() == DIMMER) {
+                if (ds == ON && d->getBrightness() == 0)
+                    d->setBrightness(BRIGHTNESS_MAX);
+                g_mqtt->notifyBrightness(d);
+            } else {
+                g_mqtt->notifyPower(d);
+            }
+        }
+    } else {
+        // Device is unreachable
+        d->offline();
+        g_mqtt->notifyOffline(d);
     }
 }
 

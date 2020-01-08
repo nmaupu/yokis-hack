@@ -2,8 +2,6 @@
 #include <Arduino.h>
 #include "globals.h"
 
-#define HACK_TIMEOUT 30000
-
 // Constants' declaration
 const byte Pairing::pairingAddress[] = {0xbe, 0xbe, 0xbe, 0xbe, 0xbe};
 
@@ -82,7 +80,7 @@ void Pairing::interruptTxOk() {
 ICACHE_RAM_ATTR
 #endif
 void Pairing::interruptRxReady() {
-    //Serial.println("Pairing RX received");
+    // Serial.println("Pairing RX received");
     if (available()) {
         readsCount++;
         read(recvBufferAddr, getPayloadSize());
@@ -114,7 +112,7 @@ ICACHE_RAM_ATTR
 void Pairing::_debugPrintRecv(byte* recvBuf, uint8_t s) {
     if (!FLAG_IS_ENABLED(FLAG_DEBUG)) return;
 
-    Serial.print("Received data: ");
+    Serial.print("Buffer data: ");
     for (uint8_t i = 0; i < s; i++) {
         Serial.print(recvBuf[i], HEX);
         Serial.print(" ");

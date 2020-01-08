@@ -11,27 +11,29 @@
 #define PAIRING_PIPE_NUM 0
 #define PAIRING_CHANNEL_NUMBER 2
 
+#define HACK_TIMEOUT 30000
+
 class Pairing : public RFConfigurator {
    private:
-    uint8_t recvBuffer[8];
-    uint8_t* recvBufferAddr;
     uint8_t readsCount;
-    static const byte pairingAddress[5];
-    void _debugPrintRecv(byte*, uint8_t);
     void _printPairingInfoRaw();
     void _printPairingInfoFormat();
-    unsigned long timeout;
 
    protected:
+    unsigned long timeout;
+    uint8_t* recvBufferAddr;
+    uint8_t recvBuffer[8];
+    static const byte pairingAddress[5];
     // Setup RF module to get ready to receive data
     void prepareForReading(uint8_t);
+    void setupRFModule() override;
+    // Reinitialize this RF object
+    void reset();
+    void _debugPrintRecv(byte*, uint8_t);
 
    public:
     // Constructor
     Pairing(uint16_t, uint16_t);
-    // Reinitialize this RF object
-    void reset();
-    void setupRFModule() override;
     void interruptTxOk() override;
     void interruptRxReady() override;
     void interruptTxFailed() override;

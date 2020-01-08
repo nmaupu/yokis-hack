@@ -26,7 +26,8 @@ Device::Device(const char* dname) {
     memset(this->version, 0, 3 * sizeof(uint8_t));
     this->setMode(ON_OFF);  // most used devices AFAIK
     this->setStatus(UNDEFINED);
-    brightness = BRIGHTNESS_OFF;
+    this->setAvailability(ONLINE);
+    this->setBrightness(BRIGHTNESS_OFF);
     this->lastUpdateMillis = 0;
     this->hasToBePolledForStatus = false;
 }
@@ -75,6 +76,10 @@ const DeviceStatus Device::getStatus() const { return status; }
 
 const DimmerBrightness Device::getBrightness() const { return brightness; }
 
+const DeviceAvailability Device::getAvailability() const {
+    return availability;
+}
+
 const unsigned long Device::getLastUpdateMillis() const {
     return lastUpdateMillis;
 }
@@ -90,6 +95,18 @@ const char* Device::getStatusAsString(DeviceStatus status) {
             return "OFF";
         case UNDEFINED:
             return "UNDEFINED";
+    }
+
+    return NULL;
+}
+
+// static
+const char* Device::getAvailabilityAsString(DeviceAvailability availability) {
+    switch (availability) {
+        case ONLINE:
+            return "Online";
+        case OFFLINE:
+            return "Offline";
     }
 
     return NULL;
@@ -166,6 +183,18 @@ void Device::setBrightness(DimmerBrightness brightness) {
     this->lastUpdateMillis = millis();
 }
 
+void Device::setAvailability(DeviceAvailability availability) {
+    this->availability = availability;
+}
+
+void Device::online() { this->setAvailability(ONLINE); }
+void Device::offline() {
+    this->setAvailability(OFFLINE);
+    this->setStatus(UNDEFINED);
+}
+bool Device::isOnline() { return this->availability == ONLINE; }
+bool Device::isOffline() { return this->availability == OFFLINE; }
+
 void Device::pollMePlease() { this->hasToBePolledForStatus = true; }
 
 void Device::pollingFinished() { this->hasToBePolledForStatus = false; }
@@ -189,6 +218,8 @@ void Device::toSerial() {
     Serial.print(name);
     Serial.print(" - status=");
     Serial.println(Device::getStatusAsString(status));
+    Serial.print("Availability: ");
+    Serial.println(Device::getAvailabilityAsString(availability));
     Serial.print("mode: ");
     Serial.println(mode);
     Serial.print("hw: ");
@@ -225,6 +256,7 @@ void Device::copy(const Device* d) {
     this->setMode(d->getMode());
     this->setStatus(d->getStatus());
     this->setBrightness(d->getBrightness());
+    this->setAvailability(d->getAvailability());
     this->lastUpdateMillis = d->lastUpdateMillis;
 }
 

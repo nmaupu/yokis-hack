@@ -29,6 +29,9 @@ void IrqManager::processIRQ() {
         case SCANNER:
             rf = g_scanner;
             break;
+        case COPYING:
+            rf = g_copy;
+            break;
     }
 
     rf->whatHappened(txOk, txFailed, rxReady);

@@ -7,26 +7,28 @@
 
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
-#include "net/mqtt.h"
 #include "RF/device.h"
+#include "net/mqtt.h"
 
 #define HASS_PREFIX "homeassistant"
 
 class MqttHass : public Mqtt {
-    protected:
-     char* newMessageJson(const Device*);
-     char* newPublishTopic(const Device*);
+   protected:
+    char* newMessageJson(const Device*);
+    char* newPublishTopic(const Device*);
 
-    public:
-     MqttHass(WiFiClient&, const char*, const uint16_t*, const char*, const char*);
-     bool publishDevice(const Device*);
-     void subscribeDevice(const Device*);
-     void notifyOnline(const Device*);
-     void notifyPower(const Device*);
-     void notifyPower(const Device*, DeviceStatus);
-     void notifyBrightness(const Device* device);
+   public:
+    MqttHass(WiFiClient&, const char*, const uint16_t*, const char*,
+             const char*);
+    bool publishDevice(const Device*);
+    void subscribeDevice(const Device*);
+    void notifyAvailability(const Device*, const char*);
+    void notifyOnline(const Device*);
+    void notifyOffline(const Device*);
+    void notifyPower(const Device*);
+    void notifyPower(const Device*, DeviceStatus);
+    void notifyBrightness(const Device* device);
 };
-
 
 #endif  // __MQTT_HASS_H__
 #endif  // ESP8266
