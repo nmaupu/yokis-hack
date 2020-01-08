@@ -37,6 +37,9 @@ Device* currentDevice;
 // MQTT configuration via compile options for ESP8266
 #ifdef ESP8266
 
+// status led to turn off
+#define STATUS_LED D4
+
 Ticker* deviceStatusPollers[MQTT_MAX_NUM_OF_YOKIS_DEVICES];
 
 // Don't update the same device during the MQTT_UPDATE_MILLIS_WINDOW
@@ -116,6 +119,9 @@ void setup() {
     currentDevice = new Device(CURRENT_DEVICE_DEFAULT_NAME);
 
 #ifdef ESP8266
+    pinMode(STATUS_LED, OUTPUT);
+    digitalWrite(STATUS_LED, HIGH); // pin is inverted so, set it off
+
     // Load all previously stored devices from SPIFFS memory
     reloadConfig(NULL);
 

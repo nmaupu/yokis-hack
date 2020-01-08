@@ -21,7 +21,7 @@ extern "C" {
 // etc.)
 // Interrupt pin from the NRF chip
 #ifdef ESP8266
-#define CE_PIN D4
+#define CE_PIN D2
 #define CSN_PIN D8
 #define IRQ_PIN D1
 #else
