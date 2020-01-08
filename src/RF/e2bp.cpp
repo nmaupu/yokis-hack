@@ -29,7 +29,7 @@ DeviceStatus E2bp::getLastKnownDeviceStatus() {
         return firstPayloadStatus;
     }
 
-    // Second payload has the device status (for ON_OFF devices)
+    // Second payload has the device status (for ON_OFF devices at least)
     return secondPayloadStatus;
 }
 
@@ -171,6 +171,20 @@ bool E2bp::dimmerSet(const uint8_t number) {
     return ret;
 }
 
+// Experimental function to get status from a device.
+// It seems to work ok for switch devices (MTR2000ER),
+// less sure for dimmers (MTV500ER)...
+DeviceStatus E2bp::pollForStatus() {
+    // The idea is to send a wrong payload and wait for a response.
+    // Using 0 for 'begin' packet seems to do the trick
+    uint8_t buf[PAYLOAD_LENGTH];
+    reset();
+    setupRFModule();
+    getStatusPayload(buf);
+    sendPayload(buf);
+    return firstPayloadStatus;
+}
+
 bool E2bp::press() {
     bool ret = true;
     if (IS_DEBUG_ENABLED) Serial.println("Button pressing");
@@ -230,6 +244,11 @@ void E2bp::getSecondPayload(uint8_t* buf) {
     buf[8] = 0x00;
 }
 
+void E2bp::getStatusPayload(uint8_t* buf) {
+    getFirstPayload(buf);
+    buf[0] = 0; // nullify first byte
+}
+
 bool E2bp::sendPayload(const uint8_t* payload) {
     if (IS_DEBUG_ENABLED) {
         Serial.print("Payload: ");
@@ -274,7 +293,7 @@ void E2bp::setupRFModule() {
     write_register(NRF_CONFIG, 0b00001110);
     // openWritingPipe(device->getHardwareAddress());  // set to TX mode
 
-    delay(4);    // It's literally what I sniffed on the SPI
+    delayMicroseconds(4000);    // It's literally what I sniffed on the SPI
     flush_rx();  // done when calling begin() but anyway...
     if (IS_DEBUG_ENABLED) {
         printDetails();
@@ -299,7 +318,7 @@ bool E2bp::runMainLoop() {
         ce(HIGH);
         write_register(NRF_STATUS, 0b01110000);  // Reset interrupts
         spiTrans(REUSE_TX_PL);
-        delay(1);
+        delayMicroseconds(1000);
         ce(LOW);
 
         nbLoops++;
