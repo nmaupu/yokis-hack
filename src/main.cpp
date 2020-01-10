@@ -636,7 +636,7 @@ void mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
                     g_bp->dimmerMid();
                     break;
                 default:  // MAX values
-                    g_bp->dimmerMax();
+                    g_bp->on();
                     break;
             }
 

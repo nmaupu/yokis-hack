@@ -239,3 +239,84 @@ I still didn't figure out how those bytes are computed.
 Hopefully, this is not really useful as I can drive every single device independently but I would like to know for the sake of completeness :) !
 
 A note for testers, if you appear to have paired two or more devices on a button, you can revert that by unpairing devices from the button (pair the device one more time to unpair). You also can reset the remote by short pressing 10 times a button and by issuing 25 presses. The remote should blink 3 or 4 times to acknowledge.
+
+## Pairing a button with multiple devices
+
+*Updated on the 2020/01/10*
+
+What I saw so far sniffing traffic:
+- Getting device's status (payload beginning by `00`)
+- Send a payload beginning by `B9` to switch `ON`
+- Send a payload beginning by `1A` to switch `OFF`
+
+The following seems to apply:
+- devices store the previous lights' status in memory
+- all devices are being set to the same status when button is pressed
+- if every devices are the same status than the one stored, toggle *all* devices
+- if some devices are `ON` and `OFF`, then reuse the previous status for *all* devices
+
+This is actually very nice because that can be used to operate nicely a device within home automation !
+- `B9` and `1A` are used respectively to switch on or off a device. No need to check the returned status !
+- status returned by the device corresponds to the last status before applying `B9` or `1A`.
+
+This also confirms that `00` is used for getting the device's status!
+
+## Technical information about controlling Yokis devices
+
+### Hardware address
+
+Hardware addresses are always represented using only 2 bytes:
+```
+b1 b2
+```
+
+The resulting correct address to use is then:
+```
+b1 b2 b1 b2 b2
+```
+
+### Commands and responses payloads
+
+#### Commands
+
+Devices can be controlled sending a *9 bytes* payloads to it.
+Here is the payload format:
+
+```
+b1 b2 00 20 b5 b6 b7 b8 00
+```
+
+| bytes   | description                                                            |
+|---------|------------------------------------------------------------------------|
+| `b1 b2` | Command                                                                |
+| `b5 b6` | Hardware address of the paired device (only two bytes are needed)      |
+| `b7`    | Payload identifier (I suppose) - I use a random byte                   |
+| `b8`    | `00` for all payloads, `02` for dimming payloads (sent every second)   |
+
+List of known commands (hexadecimal):
+
+| bytes   | description                                                            |
+|---------|------------------------------------------------------------------------|
+| `b9 04` | Switch on a device (dimmers set to max)                                |
+| `1a 04` | Switch off a device (dimmers set to off)                               |
+| `35 04` | Init packet for toggling a device / start dimming<br>Device waits for a `53 04` packet to toggle / stop dimming. |
+| `53 04` | End a `35 04` commands (device is toggled or dimming is stopped)       |
+| `00 00` | Get the status of the device                                           |
+
+Note about `35 04` and `53 04` payloads:
+- `35 04` is sent when the button is pressed (and hold)
+- `53 04` is sent when the button is released
+- if sent quickly (<0.7s) , it is associated to a *short press*
+- if not sent quickly, `35 04` starts dimming and `53 04` stops dimming. In between, a *dimming payload* has to be sent every second. A dimming payload is `35 04` command with `b8` set to `02`.
+
+#### Responses
+
+Each command is answered using 2 bytes:
+```
+b1 b2
+```
+
+| bytes   | description                                                            |
+|---------|------------------------------------------------------------------------|
+| `b1`    | `00` for a switch devices, `01` for dimmers                            |
+| `b2`    | Current status of the device: `00` for off, `01` for on                |

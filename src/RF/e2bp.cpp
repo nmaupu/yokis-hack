@@ -34,44 +34,30 @@ DeviceStatus E2bp::getLastKnownDeviceStatus() {
 }
 
 bool E2bp::setDeviceStatus(DeviceStatus ds) {
-    if (device->getMode() == NO_RCPT) {
-        // set device status is not supported, toggle instead
-        Serial.println(
-            "on/off is not supported with this device, using toggle instead");
-        return toggle();
-    } else if (device->getMode() == DIMMER) {
-        if (ds == ON) {
-            // To be sure it's ON, set to max (2 pulses)
-            // (HASS will set brightness to max when clicking power ON button)
-            return dimmerMax();
-        } else {
-            // To be sure it's OFF, set to max and toggle
-            dimmerMax();
-            delay(800);
-            bool ret = toggle();
-            if (ret) device->setStatus(OFF);
-            return ret;
+    uint8_t buf[PAYLOAD_LENGTH];
+
+    // For all devices, using the on/off payloads
+    reset();
+    setupRFModule();
+
+    getPayload(buf, ds);
+
+    bool ret = false;
+    unsigned long timeout = millis() + 1000;
+    while(millis() <= timeout && !ret)
+        ret = sendPayload(buf);
+
+    if (ret) {
+        device->setStatus(ds);
+        if (device->getMode() == DIMMER) {
+            if (ds == ON)
+                device->setBrightness(BRIGHTNESS_MAX);
+            else
+                device->setBrightness(BRIGHTNESS_OFF);
         }
     }
 
-    // ON_OFF device
-    unsigned long timeout = millis() + 1000;
-    bool retPress = false;
-    bool retRelease = false;
-    reset();
-    setupRFModule();
-    while (millis() <= timeout && secondPayloadStatus != ds) {
-        retPress = press();
-        if (retPress) retRelease = release();
-    }
-
-    // We don't test with retRelease because
-    // we can have a device toggled without receiving a response...
-    // if retPress is ok, we assume, device is toggled successfully
-    // Even if status is set when calling release, force status here
-    // just in case.
-    if (retPress) device->setStatus(ds);
-    return retPress && retRelease;
+    return ret;
 }
 
 bool E2bp::on() { return setDeviceStatus(ON); }
@@ -84,7 +70,7 @@ bool E2bp::toggle() {
 
     reset();
     setupRFModule();
-    while (millis() < timeout) {
+    while (millis() <= timeout) {
         retPress = press();
         if (device->getMode() == DIMMER)
             delay(100);  // No need to wait for on/off devices
@@ -246,7 +232,26 @@ void E2bp::getSecondPayload(uint8_t* buf) {
 
 void E2bp::getStatusPayload(uint8_t* buf) {
     getFirstPayload(buf);
-    buf[0] = 0; // nullify first byte
+    buf[0] = 0;
+    buf[1] = 0;
+    buf[2] = 0;
+}
+
+void E2bp::getOnPayload(uint8_t* buf) {
+    getFirstPayload(buf);
+    buf[0] = 0xb9;
+}
+
+void E2bp::getOffPayload(uint8_t* buf) {
+    getFirstPayload(buf);
+    buf[0] = 0x1a;
+}
+
+void E2bp::getPayload(uint8_t* buf, DeviceStatus ds) {
+    if (ds == ON)
+        getOnPayload(buf);
+    else
+        getOffPayload(buf);
 }
 
 bool E2bp::sendPayload(const uint8_t* payload) {
@@ -293,8 +298,8 @@ void E2bp::setupRFModule() {
     write_register(NRF_CONFIG, 0b00001110);
     // openWritingPipe(device->getHardwareAddress());  // set to TX mode
 
-    delayMicroseconds(4000);    // It's literally what I sniffed on the SPI
-    flush_rx();  // done when calling begin() but anyway...
+    delayMicroseconds(4000);  // It's literally what I sniffed on the SPI
+    flush_rx();               // done when calling begin() but anyway...
     if (IS_DEBUG_ENABLED) {
         printDetails();
     }

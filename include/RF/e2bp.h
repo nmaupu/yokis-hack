@@ -21,6 +21,9 @@ class E2bp : public RFConfigurator {
     void getFirstPayload(uint8_t *);
     void getSecondPayload(uint8_t *);
     void getStatusPayload(uint8_t *);
+    void getOnPayload(uint8_t *);
+    void getOffPayload(uint8_t *);
+    void getPayload(uint8_t *, DeviceStatus);
 
    protected:
     bool runMainLoop();
