@@ -194,7 +194,7 @@ Looking at this and even if it took me several days to understand and a lot of t
 - Few people on the web uses `REUSE_TX_PAYLOAD` nor `IRQ` pin.
 
 After digging and trying to mimic this algo with the *Maniacbug RF24* high level library, I decided to use low level stuff from it (I moved functions from private to public) to use functions such as `write_register` directly. Indeed, this library is intended to simplify your life as a developer but I needed more :)
-After coding everything using [low level functions](src/RF/e2bp.cpp#L266) I began to have results :D
+After coding everything using [low level functions](https://github.com/nmaupu/yokis-hack/blob/d163de186d59d2362a6537b19ff3236faf3e82b2/src/RF/e2bp.cpp#L281) I began to have results :D
 Now that I understand better, I tried to get back to the genuine NRF24 library without success yet...
 
 The solution was indeed to use `IRQ` pin for receiving data on RX when it is available. If you don't use `IRQ`, it's almost impossible to get the response from the device... It's too slow to switch from `TX` to `RX` for listening and the device has already sent the response on the air...
@@ -213,7 +213,7 @@ It's that simple, really !
 ### What about dimmers ?
 
 To dim, when pressing the button more that 1 sec, a new payload is sent every seconds:
-- `35 04 00 20 <b1> <b2> <r1> 02 00` - note the byte `02` at then end
+- `35 04 00 20 <b1> <b2> <r1> 02 00` - note the byte `02` at the end
 - the device acknowledge by responding the usual bytes
 
 When the button is released, the `53 ...` payload is sent as usual.
@@ -225,11 +225,11 @@ The same payloads are used for on, off or for dimming up or down.
 I tried many things with the payloads and it appears that if I use a wrong one, I get most of the time the device status in response !
 It is very convenient to know without actually switching the light on or off !
 To do that, I send the same payload but beginning by `00` instead of `35` or `53` and I wait for a response. The response contains the status.
-See [this code](src/RF/e2bp.cpp#L247) for more information on how this is done.
+See [this code](https://github.com/nmaupu/yokis-hack/blob/d163de186d59d2362a6537b19ff3236faf3e82b2/src/RF/e2bp.cpp#L244) for more information on how this is done.
 
 
 I can now control all my devices from *Home Assistant*. Every device is polled every 3 to 5 seconds for status in case someone uses the physical switch (on the wall) and/or a Yokis remote.
-Finally, this implementation is more reliable than the Yokis remotes because I can dim more accurately than manually pressing buttons, I can switch on or off a device and not just toggling it (I do get the status from the device) and more importantly, I can automate everything !
+Finally, this implementation is more reliable than Yokis remotes because I can dim more accurately than manually pressing buttons, I can switch on or off a device and not just toggling it (I do get the status from the device) and more importantly, I can automate everything !
 
 ## Last notes
 
@@ -279,7 +279,7 @@ b1 b2 b1 b2 b2
 
 #### Commands
 
-Devices can be controlled sending a *9 bytes* payloads to it.
+Devices can be controlled sending a *9 bytes* payload to it.
 Here is the payload format:
 
 ```
