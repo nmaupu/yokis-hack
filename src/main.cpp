@@ -74,7 +74,7 @@ char mqttPassword[] = "password";
 
 bool mqttInit = false;
 
-#endif // ESP8266
+#endif  // ESP8266
 
 // Callback functions
 bool pairingCallback(const char*);
@@ -85,6 +85,7 @@ bool scannerCallback(const char*);
 bool copyCallback(const char*);
 bool displayDevices(const char*);
 bool pressCallback(const char*);
+bool pressForCallback(const char*);
 bool releaseCallback(const char*);
 bool statusCallback(const char*);
 bool dimmerMemCallback(const char*);
@@ -101,7 +102,7 @@ bool displayConfig(const char*);
 bool reloadConfig(const char*);
 bool deleteFromConfig(const char*);
 Device* getDeviceFromParams(const char*);
-void pollDevice(Device* device); // Interrupt func
+void pollDevice(Device* device);  // Interrupt func
 void pollForStatus(Device* device);
 void mqttCallback(char*, uint8_t*, unsigned int);
 #endif
@@ -119,7 +120,7 @@ void setup() {
 
 #ifdef ESP8266
     pinMode(STATUS_LED, OUTPUT);
-    digitalWrite(STATUS_LED, HIGH); // pin is inverted so, set it off
+    digitalWrite(STATUS_LED, HIGH);  // pin is inverted so, set it off
 
     // Load all previously stored devices from SPIFFS memory
     reloadConfig(NULL);
@@ -140,10 +141,15 @@ void setup() {
                             "send a toggle message - basically act as a Yokis "
                             "remote when a button is pressed then released",
                             toggleCallback));
+    g_serial->registerCallback(
+        new GenericCallback("scan",
+                            "Scan the network for packets - polling has to be "
+                            "disabled for this to work",
+                            scannerCallback));
     g_serial->registerCallback(new GenericCallback(
-        "scan", "Scan the network for packets - polling has to be disabled for this to work", scannerCallback));
-    g_serial->registerCallback(new GenericCallback(
-        "copy", "Copy a device to a pairing one (or disconnect if already configured)", copyCallback));
+        "copy",
+        "Copy a device to a pairing one (or disconnect if already configured)",
+        copyCallback));
     g_serial->registerCallback(new GenericCallback(
         "dConfig", "display loaded config / current config", displayDevices));
     g_serial->registerCallback(new GenericCallback(
@@ -153,9 +159,11 @@ void setup() {
     g_serial->registerCallback(new GenericCallback(
         "press", "Press and hold an e2bp button", pressCallback));
     g_serial->registerCallback(new GenericCallback(
-        "release", "Release an e2bp button", releaseCallback));
+        "pressFor", "Press and hold for x milliseconds", pressForCallback));
     g_serial->registerCallback(new GenericCallback(
-        "status", "Get device status", statusCallback));
+        "release", "Release an e2bp button", releaseCallback));
+    g_serial->registerCallback(
+        new GenericCallback("status", "Get device status", statusCallback));
     g_serial->registerCallback(new GenericCallback(
         "dimmem", "Set a dimmer to memory (= 1 button pushes)",
         dimmerMemCallback));
@@ -220,12 +228,14 @@ void loop() {
         if (mqttInit) Serial.println("OK");
     } else {
         // Verify polling statuses and update via MQTT if needed
-        for (uint8_t i = 0; i < MQTT_MAX_NUM_OF_YOKIS_DEVICES && FLAG_IS_ENABLED(FLAG_POLLING); i++) {
+        for (uint8_t i = 0;
+             i < MQTT_MAX_NUM_OF_YOKIS_DEVICES && FLAG_IS_ENABLED(FLAG_POLLING);
+             i++) {
             if (devices[i] != NULL && devices[i]->needsPolling()) {
-                //devices[i]->pollingFinished();
+                // devices[i]->pollingFinished();
                 pollForStatus(devices[i]);
-                //Serial.print("Polling device ");
-                //Serial.println(devices[i]->getName());
+                // Serial.print("Polling device ");
+                // Serial.println(devices[i]->getName());
             }
         }
     }
@@ -261,8 +271,7 @@ bool pairingCallback(const char*) {
 // Get a device from the list with the given params
 Device* getDeviceFromParams(const char* params) {
 #ifdef ESP8266
-    if(params == NULL || strcmp("", params) == 0)
-        return currentDevice;
+    if (params == NULL || strcmp("", params) == 0) return currentDevice;
 
     char* paramsBak;
     char* pch;
@@ -325,7 +334,7 @@ bool offCallback(const char* params) {
 }
 
 bool scannerCallback(const char* params) {
-    if(FLAG_IS_ENABLED(FLAG_POLLING)) {
+    if (FLAG_IS_ENABLED(FLAG_POLLING)) {
         Serial.println("Disable polling before attempting to scan ! Aborting.");
         return false;
     }
@@ -408,6 +417,30 @@ bool pressCallback(const char* params) {
     g_bp->setupRFModule();
     bool ret = g_bp->press();
     return ret;
+}
+
+bool pressForCallback(const char* params) {
+    Device* d = getDeviceFromParams(params);
+
+    if (d == NULL || d->getHardwareAddress() == NULL) {
+        Serial.println("No such device");
+        return false;
+    }
+
+    char* tok;
+    size_t paramsLen = strlen(params);
+    char* paramsBak = new char[paramsLen + 1];
+    strncpy(paramsBak, params, paramsLen);
+    paramsBak[paramsLen] = 0;
+    strtok(paramsBak, " ");   // command
+    strtok(NULL, " ");        // device name
+    tok = strtok(NULL, " ");  // duration
+    unsigned long durationMs = strtoul(tok, NULL, 10);
+    delete[] paramsBak;
+
+    IrqManager::irqType = E2BP;
+    g_bp->setDevice(d);
+    return g_bp->pressAndHoldFor(durationMs);
 }
 
 bool releaseCallback(const char* params) {
@@ -498,8 +531,8 @@ bool reloadConfig(const char*) {
     for (uint8_t i = 0; i < MQTT_MAX_NUM_OF_YOKIS_DEVICES; i++) {
         if (devices[i] != NULL) {
             deviceStatusPollers[i] = new Ticker();
-            deviceStatusPollers[i]->attach_ms(random(3000, 6000),
-                                              pollDevice, devices[i]);
+            deviceStatusPollers[i]->attach_ms(random(3000, 6000), pollDevice,
+                                              devices[i]);
         }
     }
     Serial.println("Reloaded.");
@@ -534,7 +567,7 @@ void pollForStatus(Device* d) {
     DeviceStatus ds = g_bp->pollForStatus();
     d->pollingFinished();
 
-    if(ds != UNDEFINED) { // device reachable
+    if (ds != UNDEFINED) {     // device reachable
         if (d->isOffline()) {  // Device is back online
             d->online();
             g_mqtt->notifyOnline(d);

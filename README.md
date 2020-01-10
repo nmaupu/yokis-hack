@@ -27,6 +27,31 @@ I never tested devices made for shutters (MVR500ER) because I don't have those..
 
 No download available for now, you have to build yourself... Coming soon though.
 
+## Building
+
+- Install platform.io
+- Compile with the following command (for ESP8266):
+```
+pio run
+```
+
+Resulting `firmwares` can be uploaded to any supported device.
+
+Firware location depends on the device:
+- Arduino Mega firmware location: `.pio/build/megaatmega2560/firmware.elf`
+- ESP8266 firmware location: `.pio/build/d1_mini/firmware.bin`
+
+To configure the ESP8266 build, use the following command:
+```
+MQTT_IP="<MQTT_IP>" \
+MQTT_PORT="<MQTT_PORT>" \
+MQTT_USERNAME="<MQTT_USERNAME>" \
+MQTT_PASSWORD="<MQTT_PASSWORD>" \
+WIFI_SSID="<SSID>" \
+WIFI_PASSWORD="<WIFI_KEY>" \
+  pio run -e d1_mini
+```
+
 ## Usage
 
 ### Hardware needed

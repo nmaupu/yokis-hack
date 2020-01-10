@@ -21,7 +21,8 @@ void E2bp::setDevice(Device* device) { this->device = device; }
 const Device* E2bp::getDevice() { return this->device; }
 
 // Returns last known device status
-// Not reliable for DIMMER devices as status returned is the one BEFORE the command is executed
+// Not reliable for DIMMER devices as status returned is the one BEFORE the
+// command is executed
 DeviceStatus E2bp::getLastKnownDeviceStatus() {
     if (secondPayloadStatus == UNDEFINED) {
         // We probably never received the second payload.
@@ -30,9 +31,9 @@ DeviceStatus E2bp::getLastKnownDeviceStatus() {
     }
 
     // Second payload has the current device status
-    // For ON_OFF devices, this is ok, each command is responding with the status
-    // AFTER the command is executed
-    // For dimmers, the status is the one BEFORE the command is executed !!
+    // For ON_OFF devices, this is ok, each command is responding with the
+    // status AFTER the command is executed For dimmers, the status is the one
+    // BEFORE the command is executed !!
     return secondPayloadStatus;
 }
 
@@ -67,8 +68,9 @@ bool E2bp::on() { return setDeviceStatus(ON); }
 bool E2bp::off() { return setDeviceStatus(OFF); }
 
 // Toggle a device
-// This function emulates a normal operated e2bp. But a better ON and OFF are more reliable and need less communication between devices
-// To toggle, it's actually better to get status first and invert it.
+// This function emulates a normal operated e2bp. But a better ON and OFF are
+// more reliable and need less communication between devices To toggle, it's
+// actually better to get status first and invert it.
 bool E2bp::toggle() {
     unsigned long timeout = millis() + 1000;
     bool retPress = false, retRelease = false;
@@ -88,7 +90,7 @@ bool E2bp::toggle() {
                     secondPayloadStatus != UNDEFINED)
                     break;  // Status changed successfully
             } else if (device->getMode() == DIMMER) {
-                break; // assuming it has been toggled ok
+                break;  // assuming it has been toggled ok
             }
         }
     }
@@ -189,13 +191,18 @@ DeviceMode E2bp::getDeviceModeFromRecvData() {
     }
 }
 
-bool E2bp::press() {
+bool E2bp::press() { return press(false); }
+
+bool E2bp::press(bool dim) {
     bool ret = true;
     if (IS_DEBUG_ENABLED) Serial.println("Button pressing");
     uint8_t buf[PAYLOAD_LENGTH];
 
     firstPayloadStatus = UNDEFINED;
-    getPayload(buf, PL_BEGIN);
+    if (dim)
+        getPayload(buf, PL_DIM);
+    else
+        getPayload(buf, PL_BEGIN);
     ret = sendPayload(buf);
 
     if (IS_DEBUG_ENABLED) Serial.println("Button pressed");
@@ -217,6 +224,34 @@ bool E2bp::release() {
         device->setStatus(getLastKnownDeviceStatus());
         device->toggleStatus();
     }
+    return ret;
+}
+
+// Press and hold a button
+// Send begin payload and dimming payload while
+// release() has not been called
+bool E2bp::pressAndHoldFor(unsigned long duration) {
+    // Only for dimmers and must be > 700ms to work
+    if (device->getMode() != DIMMER || duration <= 700) return false;
+
+    unsigned long timeout = millis() + duration;
+
+    reset();
+    setupRFModule();
+    press();
+
+    // Every second until timeout, send a dim command
+    do {
+        yield();
+        delayMicroseconds(1000000);  // 1 second delay
+        reset();
+        setupRFModule();
+        press(true);
+    } while (millis() <= timeout);
+
+    bool ret = release();
+    // no brightness level available but device is ON
+    device->setBrightness(BRIGHTNESS_MAX);
     return ret;
 }
 
@@ -301,6 +336,7 @@ void E2bp::setupRFModule() {
     write_register(NRF_CONFIG, 0b00001110);
     // openWritingPipe(device->getHardwareAddress());  // set to TX mode
 
+    yield();
     delayMicroseconds(4000);  // It's literally what I sniffed on the SPI
     flush_rx();               // done when calling begin() but anyway...
     if (IS_DEBUG_ENABLED) {
@@ -317,14 +353,17 @@ bool E2bp::runMainLoop() {
     while (loopContinue && millis() <= timeout) {
         write_register(NRF_CONFIG, 0b00001110);  // PTX
         ce(HIGH);
+        yield();
         delayMicroseconds(15);
         ce(LOW);
+        yield();
         delayMicroseconds(685);
 
         write_register(NRF_CONFIG, 0b00001111);  // PRX
         ce(HIGH);
         write_register(NRF_STATUS, 0b01110000);  // Reset interrupts
         spiTrans(REUSE_TX_PL);
+        yield();
         delayMicroseconds(1000);
         ce(LOW);
 

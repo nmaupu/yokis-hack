@@ -22,6 +22,7 @@ class E2bp : public RFConfigurator {
 
     bool setDeviceStatus(DeviceStatus);
     uint8_t *getPayload(uint8_t *, PayloadType);
+    bool press(bool dim);
 
    protected:
     bool runMainLoop();
@@ -59,6 +60,8 @@ class E2bp : public RFConfigurator {
     bool press();
     // release the button
     bool release();
+    // press and hold for a specific duration (ms)
+    bool pressAndHoldFor(unsigned long);
     DeviceStatus getLastKnownDeviceStatus();
     // Get the device status (ON or OFF) - experimental !
     DeviceStatus pollForStatus();
