@@ -102,30 +102,31 @@ From serial, one can use the following commands:
 
 | command   | paramters       | help                                                                                                |
 |-----------|-----------------|-----------------------------------------------------------------------------------------------------|
-| `help`    |                 | Display all commands available                                                                      |
-| `debug`   |                 | Toggle debug mode                                                                                   |
-| `raw`     |                 | Toggle raw output (output from pairing command will not be formatted) - deprecated                  |
-| `config`  |                 | Display configuration flags state                                                                   |
-| `poll`    |                 | Toggle the option to poll all the configured devices for their status and publish them over MQTT    |
-| `pair`    |                 | Add a new device (emulate the pairing process) - it's like pressing a button's remote 5 times       |
-| `copy`    | `[device_name]` | Copy a device - send the payload corresponding the device to pair                                   |
-| `scan`    | `[device_name]` | scan for packet                                                                                     |
-| `toggle`  | `[device_name]` | Toggle the state of a device                                                                        |
-| `on`      | `[device_name]` | Switch on a device                                                                                  |
-| `off`     | `[device_name]` | Switch off a device                                                                                 |
-| `press`   | `[device_name]` | Emulate a button press (and hold) - this is mostly used for debugging                               |
-| `release` | `[device_name]` | Emulate a button release - this is mostly used for debugging                                        |
-| `dimmem`  | `[device_name]` | Only for dimmers - Set to dimmer memory (1 button press)                                            |
-| `dimmin`  | `[device_name]` | Only for dimmers - Set the dimmer to minimum light (4 button presses)                               |
-| `dimmax`  | `[device_name]` | Only for dimmers - Set the dimmer to 100% light (2 button presses)                                  |
-| `dimmid`  | `[device_name]` | Only for dimmers - Set the dimmer to 50% light (3 button presses)                                   |
-| `dimnil`  | `[device_name]` | Only for dimmers - Set the dimmer *night light* mode (7 button presses)                             |
-| `save`    |                 | Persist the current device to internal ESP memory (SPIFFS)                                          |
-| `delete`  | `[device_name]` | Delete one entry from the internal ESP memory (SPIFFS)                                              |
-| `clear`   |                 | Clear the internal ESP memory and delete all stored devices(SPIFFS)                                 |
-| `reload`  |                 | Reload the configuration from the internal ESP memory (SPIFFS)                                      |
-| `dConfig` |                 | Display all loaded devices information                                                              |
-| `dSpiffs` |                 | Display internal memory configuration file as is                                                    |
+| `help`    |                          | Display all commands available                                                                      |
+| `debug`   |                          | Toggle debug mode                                                                                   |
+| `raw`     |                          | Toggle raw output (output from pairing command will not be formatted) - deprecated                  |
+| `config`  |                          | Display configuration flags state                                                                   |
+| `poll`    |                          | Toggle the option to poll all the configured devices for their status and publish them over MQTT    |
+| `pair`    |                          | Add a new device (emulate the pairing process) - it's like pressing a button's remote 5 times       |
+| `copy`    | `[device_name]`          | Copy a device - send the payload corresponding the device to pair                                   |
+| `scan`    | `[device_name]`          | scan for packet                                                                                     |
+| `toggle`  | `[device_name]`          | Toggle the state of a device                                                                        |
+| `on`      | `[device_name]`          | Switch on a device                                                                                  |
+| `off`     | `[device_name]`          | Switch off a device                                                                                 |
+| `press`   | `[device_name]`          | Emulate a button press (and hold) - this is mostly used for debugging                               |
+| `pressFor`| `device_name duration`   | Emulate a button press and hold for a duration (dimmers only)                                       |
+| `release` | `[device_name]`          | Emulate a button release - this is mostly used for debugging                                        |
+| `dimmem`  | `[device_name]`          | Only for dimmers - Set to dimmer memory (1 button press)                                            |
+| `dimmin`  | `[device_name]`          | Only for dimmers - Set the dimmer to minimum light (4 button presses)                               |
+| `dimmax`  | `[device_name]`          | Only for dimmers - Set the dimmer to 100% light (2 button presses)                                  |
+| `dimmid`  | `[device_name]`          | Only for dimmers - Set the dimmer to 50% light (3 button presses)                                   |
+| `dimnil`  | `[device_name]`          | Only for dimmers - Set the dimmer *night light* mode (7 button presses)                             |
+| `save`    |                          | Persist the current device to internal ESP memory (SPIFFS)                                          |
+| `delete`  | `[device_name]`          | Delete one entry from the internal ESP memory (SPIFFS)                                              |
+| `clear`   |                          | Clear the internal ESP memory and delete all stored devices(SPIFFS)                                 |
+| `reload`  |                          | Reload the configuration from the internal ESP memory (SPIFFS)                                      |
+| `dConfig` |                          | Display all loaded devices information                                                              |
+| `dSpiffs` |                          | Display internal memory configuration file as is                                                    |
 
 You need to use the serial for initial configuring and debugging.
 After adding your devices, you don't need serial anymore.
