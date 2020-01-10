@@ -10,6 +10,8 @@
 #define PAYLOAD_LENGTH 9
 #define MAIN_LOOP_TIMEOUT_MILLIS 500
 
+enum PayloadType { PL_BEGIN = 0, PL_END, PL_STATUS, PL_ON, PL_OFF, PL_DIM };
+
 // Very low level class to control a Yokis device just like a e2bp remote
 class E2bp : public RFConfigurator {
    private:
@@ -19,24 +21,23 @@ class E2bp : public RFConfigurator {
     char answerBuf[2];
 
     bool setDeviceStatus(DeviceStatus);
-    void getFirstPayload(uint8_t *);
-    void getSecondPayload(uint8_t *);
-    void getStatusPayload(uint8_t *);
-    void getOnPayload(uint8_t *);
-    void getOffPayload(uint8_t *);
-    void getPayload(uint8_t *, DeviceStatus);
+    uint8_t *getPayload(uint8_t *, PayloadType);
 
    protected:
     bool runMainLoop();
     void setupPayload(const uint8_t *);
 
+   protected:
+    bool sendPayload(const uint8_t *);
+    void stopMainLoop();
+
    public:
-    //uint8_t counter = 0;
+    // uint8_t counter = 0;
     // Constructor
     E2bp(uint16_t, uint16_t);
     ~E2bp();
-    bool sendPayload(const uint8_t *);
-    void stopMainLoop();
+    void reset();
+    void setupRFModule() override;
     bool on();
     bool off();
     bool toggle();
@@ -58,8 +59,6 @@ class E2bp : public RFConfigurator {
     bool press();
     // release the button
     bool release();
-    void reset();
-    void setupRFModule() override;
     DeviceStatus getLastKnownDeviceStatus();
     // Get the device status (ON or OFF) - experimental !
     DeviceStatus pollForStatus();
@@ -67,7 +66,6 @@ class E2bp : public RFConfigurator {
     void interruptTxOk() override;
     void interruptRxReady() override;
     void interruptTxFailed() override;
-
 
     // Getters / setters
     void setDevice(Device *);

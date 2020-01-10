@@ -40,13 +40,13 @@ bool E2bp::setDeviceStatus(DeviceStatus ds) {
     reset();
     setupRFModule();
 
-    getPayload(buf, ds);
+    getPayload(buf, ds == ON ? PL_ON : PL_OFF);
 
     bool ret = false;
     unsigned long timeout = millis() + 1000;
     while (millis() <= timeout && !ret) ret = sendPayload(buf);
 
-    if (ret) {
+    if (ret || device->getMode() == NO_RCPT) { // if NO_RCPT, ignore ret
         device->setStatus(ds);
         if (device->getMode() == DIMMER) {
             if (ds == ON)
@@ -165,7 +165,7 @@ DeviceStatus E2bp::pollForStatus() {
     uint8_t buf[PAYLOAD_LENGTH];
     reset();
     setupRFModule();
-    getStatusPayload(buf);
+    getPayload(buf, PL_STATUS);
     sendPayload(buf);
     return firstPayloadStatus;
 }
@@ -188,7 +188,7 @@ bool E2bp::press() {
     uint8_t buf[PAYLOAD_LENGTH];
 
     firstPayloadStatus = UNDEFINED;
-    getFirstPayload(buf);
+    getPayload(buf, PL_BEGIN);
     ret = sendPayload(buf);
 
     if (IS_DEBUG_ENABLED) Serial.println("Button pressed");
@@ -200,7 +200,7 @@ bool E2bp::release() {
     if (IS_DEBUG_ENABLED) Serial.println("Button releasing");
     uint8_t buf[PAYLOAD_LENGTH];
 
-    getSecondPayload(buf);
+    getPayload(buf, PL_END);
     ret = sendPayload(buf);
 
     if (IS_DEBUG_ENABLED) Serial.println("Button released");
@@ -213,55 +213,41 @@ bool E2bp::release() {
     return ret;
 }
 
-void E2bp::getFirstPayload(uint8_t* buf) {
-    buf[0] = YOKIS_CMD_BEGIN;
+// Fill a given buffer with the correct payload and return a pointer to it
+uint8_t* E2bp::getPayload(uint8_t* buf, PayloadType type) {
+    buf[0] = 0x00;
     buf[1] = 0x04;
     buf[2] = 0x00;
     buf[3] = 0x20;
     buf[4] = device->getHardwareAddress()[0];
     buf[5] = device->getHardwareAddress()[1];
-    // buf[4] = 0;
-    // buf[5] = 0;
     buf[6] = random(0, 0xff);
     buf[7] = 0x00;
     buf[8] = 0x00;
-}
 
-void E2bp::getSecondPayload(uint8_t* buf) {
-    buf[0] = YOKIS_CMD_END;
-    buf[1] = 0x04;
-    buf[2] = 0x00;
-    buf[3] = 0x20;
-    buf[4] = device->getHardwareAddress()[0];
-    buf[5] = device->getHardwareAddress()[1];
-    // buf[4] = 0;
-    // buf[5] = 0;
-    buf[6] = random(0, 0xff);
-    buf[7] = 0x00;
-    buf[8] = 0x00;
-}
+    switch (type) {
+        case PL_BEGIN:
+            buf[0] = YOKIS_CMD_BEGIN;
+            break;
+        case PL_END:
+            buf[0] = YOKIS_CMD_END;
+            break;
+        case PL_ON:
+            buf[0] = YOKIS_CMD_ON;
+            break;
+        case PL_OFF:
+            buf[0] = YOKIS_CMD_OFF;
+            break;
+        case PL_STATUS:
+            buf[0] = 0;
+            buf[1] = 0;
+            break;
+        case PL_DIM:
+            buf[0] = YOKIS_CMD_BEGIN;
+            buf[7] = 0x02;
+    }
 
-void E2bp::getStatusPayload(uint8_t* buf) {
-    getFirstPayload(buf);
-    buf[0] = YOKIS_CMD_STATUS;
-    buf[1] = YOKIS_CMD_STATUS;
-}
-
-void E2bp::getOnPayload(uint8_t* buf) {
-    getFirstPayload(buf);
-    buf[0] = YOKIS_CMD_ON;
-}
-
-void E2bp::getOffPayload(uint8_t* buf) {
-    getFirstPayload(buf);
-    buf[0] = YOKIS_CMD_OFF;
-}
-
-void E2bp::getPayload(uint8_t* buf, DeviceStatus ds) {
-    if (ds == ON)
-        getOnPayload(buf);
-    else
-        getOffPayload(buf);
+    return buf;
 }
 
 bool E2bp::sendPayload(const uint8_t* payload) {
@@ -321,7 +307,7 @@ bool E2bp::runMainLoop() {
 
     ce(LOW);
     // while not interrupted by RX, timeout or by device mode
-    while (loopContinue && millis() < timeout) {
+    while (loopContinue && millis() <= timeout) {
         write_register(NRF_CONFIG, 0b00001110);  // PTX
         ce(HIGH);
         delayMicroseconds(15);
@@ -335,8 +321,7 @@ bool E2bp::runMainLoop() {
         delayMicroseconds(1000);
         ce(LOW);
 
-        nbLoops++;
-        if (device->getMode() == NO_RCPT && nbLoops >= 30) {
+        if (device->getMode() == NO_RCPT && (nbLoops++) >= 30) {
             break;  // Stop sending, we are not gonna receive anything
         }
     }
