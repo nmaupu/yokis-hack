@@ -231,22 +231,26 @@ bool E2bp::release() {
 // Send begin payload and dimming payload while
 // release() has not been called
 bool E2bp::pressAndHoldFor(unsigned long duration) {
-    // Only for dimmers and must be > 700ms to work
+    // Only for dimmers and must be > 700ms
     if (device->getMode() != DIMMER || duration <= 700) return false;
-
-    unsigned long timeout = millis() + duration;
 
     reset();
     setupRFModule();
     press();
 
+    unsigned long timeout = millis() + duration;
+    unsigned long startTime = millis();
     // Every second until timeout, send a dim command
     do {
+        // send payload every 1 second
+        if (millis() - startTime >= 1000) {
+            startTime = millis();
+            reset();
+            setupRFModule();
+            press(true);
+        }
         yield();
-        delayMicroseconds(1000000);  // 1 second delay
-        reset();
-        setupRFModule();
-        press(true);
+        delayMicroseconds(1000);  // 1 ms delay
     } while (millis() <= timeout);
 
     bool ret = release();
