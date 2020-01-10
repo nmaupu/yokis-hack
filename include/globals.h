@@ -40,6 +40,13 @@ extern "C" {
 // Serial print buffer size
 #define PRINT_BUFFER_SIZE 32
 
+// Yokis commands
+#define YOKIS_CMD_BEGIN 0x35
+#define YOKIS_CMD_END 0x53
+#define YOKIS_CMD_STATUS 0x00
+#define YOKIS_CMD_ON 0xb9
+#define YOKIS_CMD_OFF 0x1a
+
 // Global config flags
 extern byte g_ConfigFlags;
 // Global vars for all NRF manipulations
@@ -52,8 +59,8 @@ extern Copy* g_copy;
 extern MqttHass* g_mqtt;
 #endif
 
-#define FLAG_DEBUG   (1 << 0)
-#define FLAG_RAW     (1 << 1)
+#define FLAG_DEBUG (1 << 0)
+#define FLAG_RAW (1 << 1)
 #define FLAG_POLLING (1 << 2)
 
 // returns true if debug is enabled

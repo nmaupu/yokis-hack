@@ -44,8 +44,7 @@ bool E2bp::setDeviceStatus(DeviceStatus ds) {
 
     bool ret = false;
     unsigned long timeout = millis() + 1000;
-    while(millis() <= timeout && !ret)
-        ret = sendPayload(buf);
+    while (millis() <= timeout && !ret) ret = sendPayload(buf);
 
     if (ret) {
         device->setStatus(ds);
@@ -171,6 +170,18 @@ DeviceStatus E2bp::pollForStatus() {
     return firstPayloadStatus;
 }
 
+// Get device mode from previous received data from the device
+DeviceMode E2bp::getDeviceModeFromRecvData() {
+    switch (answerBuf[0]) {
+        case 0:
+            return ON_OFF;
+        case 1:
+            return DIMMER;
+        default:
+            return NO_RCPT;
+    }
+}
+
 bool E2bp::press() {
     bool ret = true;
     if (IS_DEBUG_ENABLED) Serial.println("Button pressing");
@@ -203,7 +214,7 @@ bool E2bp::release() {
 }
 
 void E2bp::getFirstPayload(uint8_t* buf) {
-    buf[0] = device->getBeginPacket();
+    buf[0] = YOKIS_CMD_BEGIN;
     buf[1] = 0x04;
     buf[2] = 0x00;
     buf[3] = 0x20;
@@ -217,7 +228,7 @@ void E2bp::getFirstPayload(uint8_t* buf) {
 }
 
 void E2bp::getSecondPayload(uint8_t* buf) {
-    buf[0] = device->getEndPacket();
+    buf[0] = YOKIS_CMD_END;
     buf[1] = 0x04;
     buf[2] = 0x00;
     buf[3] = 0x20;
@@ -232,19 +243,18 @@ void E2bp::getSecondPayload(uint8_t* buf) {
 
 void E2bp::getStatusPayload(uint8_t* buf) {
     getFirstPayload(buf);
-    buf[0] = 0;
-    buf[1] = 0;
-    buf[2] = 0;
+    buf[0] = YOKIS_CMD_STATUS;
+    buf[1] = YOKIS_CMD_STATUS;
 }
 
 void E2bp::getOnPayload(uint8_t* buf) {
     getFirstPayload(buf);
-    buf[0] = 0xb9;
+    buf[0] = YOKIS_CMD_ON;
 }
 
 void E2bp::getOffPayload(uint8_t* buf) {
     getFirstPayload(buf);
-    buf[0] = 0x1a;
+    buf[0] = YOKIS_CMD_OFF;
 }
 
 void E2bp::getPayload(uint8_t* buf, DeviceStatus ds) {
@@ -307,7 +317,6 @@ void E2bp::setupRFModule() {
 
 bool E2bp::runMainLoop() {
     unsigned long timeout = millis() + MAIN_LOOP_TIMEOUT_MILLIS;
-    uint8_t buf[2];
     uint8_t nbLoops = 0;
 
     ce(LOW);
@@ -334,20 +343,20 @@ bool E2bp::runMainLoop() {
 
     // We got here right after being interrupted
     if (available()) {
-        read(buf, 2);
+        read(answerBuf, 2);
 
         if (IS_DEBUG_ENABLED) {
             Serial.print("Received: ");
-            printBinaryRepresentation(buf[0], true);
+            printBinaryRepresentation(answerBuf[0], true);
             Serial.print(" ");
-            printBinaryRepresentation(buf[1], true);
+            printBinaryRepresentation(answerBuf[1], true);
             Serial.println();
         }
 
         if (firstPayloadStatus == UNDEFINED)
-            firstPayloadStatus = buf[1] == 1 ? ON : OFF;
+            firstPayloadStatus = answerBuf[1] == 1 ? ON : OFF;
         else
-            secondPayloadStatus = buf[1] == 1 ? ON : OFF;
+            secondPayloadStatus = answerBuf[1] == 1 ? ON : OFF;
     }
 
     return !loopContinue;  // false if timeout occured

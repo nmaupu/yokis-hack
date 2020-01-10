@@ -3,9 +3,6 @@
 
 #include <Arduino.h>
 
-#define YOKIS_DEFAULT_BEGIN_PACKET 0x35
-#define YOKIS_DEFAULT_END_PACKET 0x53
-
 // Depending on device, behavior can be different...
 // Still to figure out what can configure that in scanned protocol though.
 enum DeviceMode {
@@ -34,8 +31,6 @@ class Device {
     char* name;
     uint8_t* hardwareAddress;
     uint8_t channel;
-    uint8_t beginPacket;
-    uint8_t endPacket;
     uint8_t serial[2];
     uint8_t version[3];
     DeviceMode mode;
@@ -72,8 +67,6 @@ class Device {
     const char* getName() const;
     const uint8_t* getHardwareAddress() const;
     uint8_t getChannel() const;
-    uint8_t getBeginPacket() const;
-    uint8_t getEndPacket() const;
     const uint8_t* getVersion() const;
     const uint8_t* getSerial() const;
     const DeviceMode getMode() const;
@@ -88,8 +81,6 @@ class Device {
 
     // Setters
     void setName(const char*);
-    void setBeginPacket(uint8_t);
-    void setEndPacket(uint8_t);
     void setVersion(const uint8_t*);
     void setSerial(const uint8_t*);
     // set a 5 bytes hardware address

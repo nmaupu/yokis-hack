@@ -20,8 +20,6 @@ Device::Device(const char* dname) {
     this->setName(dname);
     this->hardwareAddress =
         (uint8_t*)malloc(HARDWARE_ADDRESS_LENGTH * sizeof(uint8_t));
-    this->beginPacket = YOKIS_DEFAULT_BEGIN_PACKET;
-    this->endPacket = YOKIS_DEFAULT_END_PACKET;
     memset(this->serial, 0, 2 * sizeof(uint8_t));
     memset(this->version, 0, 3 * sizeof(uint8_t));
     this->setMode(ON_OFF);  // most used devices AFAIK
@@ -61,10 +59,6 @@ const uint8_t* Device::getHardwareAddress() const {
 }
 
 uint8_t Device::getChannel() const { return this->channel; }
-
-uint8_t Device::getBeginPacket() const { return this->beginPacket; }
-
-uint8_t Device::getEndPacket() const { return this->endPacket; }
 
 const uint8_t* Device::getVersion() const { return this->version; }
 
@@ -118,10 +112,6 @@ void Device::setName(const char* dname) {
         strcpy(this->name, dname);
     }
 }
-
-void Device::setBeginPacket(uint8_t p) { this->beginPacket = p; }
-
-void Device::setEndPacket(uint8_t p) { this->endPacket = p; }
 
 void Device::setHardwareAddress(const uint8_t* hwAddr) {
     if (hwAddr != NULL) {
@@ -228,10 +218,6 @@ void Device::toSerial() {
     Serial.println(hardwareAddress[1], HEX);
     Serial.print("channel: ");
     Serial.println(channel, HEX);
-    Serial.print("begin/end packets: ");
-    Serial.print(beginPacket, HEX);
-    Serial.print(" ");
-    Serial.println(endPacket, HEX);
     Serial.print("serial/version: ");
     Serial.print(serial[0], HEX);
     Serial.print(" ");
@@ -249,8 +235,6 @@ void Device::copy(const Device* d) {
     this->setName(d->getName());
     this->setHardwareAddress(d->getHardwareAddress());
     this->setChannel(d->getChannel());
-    this->setBeginPacket(d->getBeginPacket());
-    this->setEndPacket(d->getEndPacket());
     this->setVersion(d->getVersion());
     this->setSerial(d->getSerial());
     this->setMode(d->getMode());
@@ -315,7 +299,7 @@ bool Device::saveToSpiffs() {
     char buf[128];
     sprintf(buf, "%s%s%02x%02x%s%02x%s%02x%s%02x%s%02x%02x%02x%s%02x%02x%s%04d",
             name, SEP, hardwareAddress[0], hardwareAddress[1], SEP, channel,
-            SEP, beginPacket, SEP, endPacket, SEP, version[0], version[1],
+            SEP, 0, SEP, 0, SEP, version[0], version[1],
             version[2], SEP, serial[0], serial[1], SEP, mode);
     int bytesWritten = f.println(buf);
     if (bytesWritten <= 0) {
@@ -371,11 +355,11 @@ void Device::loadFromSpiffs(Device** devices, const unsigned int size) {
         tok = strtok(NULL, SEP);  // channel represented as 2 chars
         d->setChannel((uint8_t)strtoul(tok, NULL, 16));
 
-        tok = strtok(NULL, SEP);  // begin packet represented as 2 chars
-        d->setBeginPacket((uint8_t)strtoul(tok, NULL, 16));
+        tok = strtok(NULL, SEP);  // begin packet represented as 2 chars - not used anymore
+        //d->setBeginPacket((uint8_t)strtoul(tok, NULL, 16));
 
-        tok = strtok(NULL, SEP);  // end packet represented as 2 chars
-        d->setEndPacket((uint8_t)strtoul(tok, NULL, 16));
+        tok = strtok(NULL, SEP);  // end packet represented as 2 chars - not used anymore
+        //d->setEndPacket((uint8_t)strtoul(tok, NULL, 16));
 
         tok = strtok(NULL, SEP);  // version represented as 6 chars
         if (tok != NULL) {

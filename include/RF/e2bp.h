@@ -16,6 +16,7 @@ class E2bp : public RFConfigurator {
     Device *device;
     bool loopContinue;
     DeviceStatus firstPayloadStatus, secondPayloadStatus;
+    char answerBuf[2];
 
     bool setDeviceStatus(DeviceStatus);
     void getFirstPayload(uint8_t *);
@@ -62,6 +63,7 @@ class E2bp : public RFConfigurator {
     DeviceStatus getLastKnownDeviceStatus();
     // Get the device status (ON or OFF) - experimental !
     DeviceStatus pollForStatus();
+    DeviceMode getDeviceModeFromRecvData();
     void interruptTxOk() override;
     void interruptRxReady() override;
     void interruptTxFailed() override;

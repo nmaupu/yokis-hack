@@ -32,11 +32,9 @@ IrqType IrqManager::irqType = PAIRING;
 Device* currentDevice;
 
 #define CURRENT_DEVICE_DEFAULT_NAME "tempDevice"
-#define MUTEX_TIMEOUT 200
 
 // MQTT configuration via compile options for ESP8266
 #ifdef ESP8266
-
 // status led to turn off
 #define STATUS_LED D4
 
@@ -47,7 +45,7 @@ Ticker* deviceStatusPollers[MQTT_MAX_NUM_OF_YOKIS_DEVICES];
 // HASS sends sometimes multiple times the same MQTT message in a row...
 // Usually 2 MQTT messages sent in a row are processed very quickly
 // something like 3 to 5 ms
-#define MQTT_UPDATE_MILLIS_WINDOW 50
+#define MQTT_UPDATE_MILLIS_WINDOW 100
 
 WiFiClient espClient;
 #ifdef MQTT_IP
@@ -75,7 +73,8 @@ char mqttPassword[] = "password";
 #endif
 
 bool mqttInit = false;
-#endif
+
+#endif // ESP8266
 
 // Callback functions
 bool pairingCallback(const char*);
@@ -156,7 +155,7 @@ void setup() {
     g_serial->registerCallback(new GenericCallback(
         "release", "Release an e2bp button", releaseCallback));
     g_serial->registerCallback(new GenericCallback(
-        "status", "Status implementation test", statusCallback));
+        "status", "Get device status", statusCallback));
     g_serial->registerCallback(new GenericCallback(
         "dimmem", "Set a dimmer to memory (= 1 button pushes)",
         dimmerMemCallback));
@@ -250,6 +249,10 @@ bool pairingCallback(const char*) {
         g_pairingRF->getVersionFromRecvData(buf);
         currentDevice->setVersion(buf);
 
+        // Get device status and get device mode
+        statusCallback(NULL);
+        currentDevice->setMode(g_bp->getDeviceModeFromRecvData());
+
         currentDevice->toSerial();
     }
     return res;
@@ -258,6 +261,9 @@ bool pairingCallback(const char*) {
 // Get a device from the list with the given params
 Device* getDeviceFromParams(const char* params) {
 #ifdef ESP8266
+    if(params == NULL || strcmp("", params) == 0)
+        return currentDevice;
+
     char* paramsBak;
     char* pch;
     Device* d;
@@ -452,6 +458,7 @@ bool storeConfigCallback(const char* params) {
     pch = strtok(NULL, " ");  // get the name of the device
     currentDevice->setName(pch);
 
+    // This should be auto detected from pairing
     pch = strtok(NULL, " ");  // Get the device mode
     if (pch != NULL) {
         currentDevice->setMode(pch);
