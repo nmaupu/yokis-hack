@@ -21,7 +21,7 @@ void E2bp::setDevice(Device* device) { this->device = device; }
 const Device* E2bp::getDevice() { return this->device; }
 
 // Returns last known device status
-// Not reliable for DIMMER devices
+// Not reliable for DIMMER devices as status returned is the one BEFORE the command is executed
 DeviceStatus E2bp::getLastKnownDeviceStatus() {
     if (secondPayloadStatus == UNDEFINED) {
         // We probably never received the second payload.
@@ -29,7 +29,10 @@ DeviceStatus E2bp::getLastKnownDeviceStatus() {
         return firstPayloadStatus;
     }
 
-    // Second payload has the device status (for ON_OFF devices at least)
+    // Second payload has the current device status
+    // For ON_OFF devices, this is ok, each command is responding with the status
+    // AFTER the command is executed
+    // For dimmers, the status is the one BEFORE the command is executed !!
     return secondPayloadStatus;
 }
 
@@ -46,7 +49,7 @@ bool E2bp::setDeviceStatus(DeviceStatus ds) {
     unsigned long timeout = millis() + 1000;
     while (millis() <= timeout && !ret) ret = sendPayload(buf);
 
-    if (ret || device->getMode() == NO_RCPT) { // if NO_RCPT, ignore ret
+    if (ret || device->getMode() == NO_RCPT) {  // if NO_RCPT, ignore ret
         device->setStatus(ds);
         if (device->getMode() == DIMMER) {
             if (ds == ON)
@@ -63,6 +66,9 @@ bool E2bp::on() { return setDeviceStatus(ON); }
 
 bool E2bp::off() { return setDeviceStatus(OFF); }
 
+// Toggle a device
+// This function emulates a normal operated e2bp. But a better ON and OFF are more reliable and need less communication between devices
+// To toggle, it's actually better to get status first and invert it.
 bool E2bp::toggle() {
     unsigned long timeout = millis() + 1000;
     bool retPress = false, retRelease = false;
@@ -82,7 +88,7 @@ bool E2bp::toggle() {
                     secondPayloadStatus != UNDEFINED)
                     break;  // Status changed successfully
             } else if (device->getMode() == DIMMER) {
-                break;
+                break; // assuming it has been toggled ok
             }
         }
     }
@@ -91,20 +97,21 @@ bool E2bp::toggle() {
     // we can have a device toggled without receiving a response...
     // if retPress is ok, we assume, device is toggled successfully
     // release set device status buf if we don't receive any response,
-    // status won't be set... Redo it here.
+    // status won't be set...
     if (retPress && device->getMode() == ON_OFF) {
         // we know the status, set it
         device->setStatus(getLastKnownDeviceStatus());
     } else if (retPress && device->getMode() == DIMMER) {
-        // Seems to be receiving 0 for ON and 1 for OFF
-        // but not really sure about that :/
+        // dimmer replies with the current status BEFORE applying the command
+        // so need to invert it
         device->setStatus(getLastKnownDeviceStatus());
         device->toggleStatus();
     }
+
     return retPress && retRelease;
 }
 
-// See Yokis MTV500ER manual for this configs
+// See Yokis MTV500ER manual for those configs
 // Note: depending on configuration, 2 pulses can set to memory or 100%
 // default is 100% for 2 pulses, that's what we will be using here...
 bool E2bp::dimmerMem() { return dimmerSet(1); }
