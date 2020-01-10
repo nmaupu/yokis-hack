@@ -23,6 +23,10 @@ The following Yokis devices are supported:
 
 I never tested devices made for shutters (MVR500ER) because I don't have those...
 
+## Download
+
+No download available for now, you have to build yourself... Coming soon though.
+
 ## Usage
 
 ### Hardware needed
@@ -57,7 +61,77 @@ For example, here are the pinout of my testing MCUs:
 | MOSI | D7            | 51           |
 | MISO | D6            | 50           |
 
+### Firmware usage
 
-## Download
+#### Features
 
-No download available for now, you have to build yourself... Coming soon though.
+If you use Arduino, a very small set of features are available. Use an ESP8266 for all connectivity features (WiFi and MQTT).
+
+The following features are available:
+- Command line interface over serial (115200 bauds)
+- Home Assistant auto discovery (with prefix `/homeassistant` as describe on [Home Assistant documentation](https://www.home-assistant.io/docs/mqtt/discovery/))
+
+From serial, one can use the following commands:
+
+**Note:** When you pair a device, its configuration is stored and can be use for various commands if you don't pass any `device_name` as parameter. If you pair a new device, it replaces the stored configuration.
+
+| command   | paramters       | help                                                                                                |
+|-----------|-----------------|-----------------------------------------------------------------------------------------------------|
+| `help`    |                 | Display all commands available                                                                      |
+| `debug`   |                 | Toggle debug mode                                                                                   |
+| `raw`     |                 | Toggle raw output (output from pairing command will not be formatted) - deprecated                  |
+| `config`  |                 | Display configuration flags state                                                                   |
+| `poll`    |                 | Toggle the option to poll all the configured devices for their status and publish them over MQTT    |
+| `pair`    |                 | Add a new device (emulate the pairing process) - it's like pressing a button's remote 5 times       |
+| `copy`    | `[device_name]` | Copy a device - send the payload corresponding the device to pair                                   |
+| `scan`    | `[device_name]` | scan for packet                                                                                     |
+| `toggle`  | `[device_name]` | Toggle the state of a device                                                                        |
+| `on`      | `[device_name]` | Switch on a device                                                                                  |
+| `off`     | `[device_name]` | Switch off a device                                                                                 |
+| `press`   | `[device_name]` | Emulate a button press (and hold) - this is mostly used for debugging                               |
+| `release` | `[device_name]` | Emulate a button release - this is mostly used for debugging                                        |
+| `dimmem`  | `[device_name]` | Only for dimmers - Set to dimmer memory (1 button press)                                            |
+| `dimmin`  | `[device_name]` | Only for dimmers - Set the dimmer to minimum light (4 button presses)                               |
+| `dimmax`  | `[device_name]` | Only for dimmers - Set the dimmer to 100% light (2 button presses)                                  |
+| `dimmid`  | `[device_name]` | Only for dimmers - Set the dimmer to 50% light (3 button presses)                                   |
+| `dimnil`  | `[device_name]` | Only for dimmers - Set the dimmer *night light* mode (7 button presses)                             |
+| `save`    |                 | Persist the current device to internal ESP memory (SPIFFS)                                          |
+| `delete`  | `[device_name]` | Delete one entry from the internal ESP memory (SPIFFS)                                              |
+| `clear`   |                 | Clear the internal ESP memory and delete all stored devices(SPIFFS)                                 |
+| `reload`  |                 | Reload the configuration from the internal ESP memory (SPIFFS)                                      |
+| `dConfig` |                 | Display all loaded devices information                                                              |
+| `dSpiffs` |                 | Display internal memory configuration file as is                                                    |
+
+You need to use the serial for initial configuring and debugging.
+After adding your devices, you don't need serial anymore.
+
+#### Examples
+
+##### Pair devices and save configuration
+
+On the serial, use the `pair` command for each device you want to store and `save` it to config:
+- `pair`
+- click on the *connect* button on the back of the device
+
+Instead of pressing the *connect* button at the back of the device which is sometimes not accessible. You can use an already paired remote:
+- use the `pair` command like before
+- press a remote's button for more than 3 seconds
+
+##### Program a genuine Yokis remote
+
+You (re)configure a genuine yokis remote, using the `copy` command like so:
+- put the remote in pairing mode (5 short press on a button)
+- use the `copy` command
+
+### MQTT reference
+
+Published topics:
+- Auto discovery uses Home Assistant prefix: `homeassistant/`.
+- Device's state is sent using the following topic pattern:
+  - `<device_name>/tele/LWT` = `{Online,Offline}`
+  - `<device_name>/tele/STATE` = `{"POWER":"On"}` or `{"POWER":"Off"}`
+  - `<device_name>/tele/BRIGHTNESS` = `{"BRIGHTNESS":"value"}` where `value` is `0`, `1`, `2`, `3` or `4`. `3` and `4` are the same.
+
+Subscribed topics:
+- `<device_name>/cmnd/POWER`: `ON` or `OFF`
+- `<device_name>/cmnd/BRIGHTNESS`: `0`, `1`, `2`, `3` or `4`
