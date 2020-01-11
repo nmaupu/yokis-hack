@@ -165,9 +165,7 @@ bool E2bp::dimmerSet(const uint8_t number) {
     return ret;
 }
 
-// Experimental function to get status from a device.
-// It seems to work ok for switch devices (MTR2000ER),
-// less sure for dimmers (MTV500ER)...
+// Ask a device to give its status
 DeviceStatus E2bp::pollForStatus() {
     // The idea is to send a wrong payload and wait for a response.
     // Using 0 for 'begin' packet seems to do the trick

@@ -39,6 +39,7 @@ class Device {
     DimmerBrightness brightness;  // only for dimmer device
     unsigned long lastUpdateMillis;
     bool hasToBePolledForStatus;
+    uint8_t failedPolls;
 
 #ifdef ESP8266
     static bool spiffsInitialized;
@@ -77,6 +78,7 @@ class Device {
     const unsigned long getLastUpdateMillis() const;
     bool needsPolling();
     static const char* getStatusAsString(DeviceStatus status);
+    static const char* getModeAsString(DeviceMode mode);
     static const char* getAvailabilityAsString(DeviceAvailability);
 
     // Setters
@@ -99,7 +101,9 @@ class Device {
     bool isOnline();
     bool isOffline();
     void pollMePlease();
-    void pollingFinished();
+    void pollingSuccess();
+    uint8_t pollingFailed();
+    uint8_t getFailedPollings();
 
     // misc
     void toSerial();

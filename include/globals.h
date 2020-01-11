@@ -47,6 +47,8 @@ extern "C" {
 #define YOKIS_CMD_ON 0xb9
 #define YOKIS_CMD_OFF 0x1a
 
+#define DEVICE_MAX_FAILED_POLLING_BEFORE_OFFLINE 3
+
 // Global config flags
 extern byte g_ConfigFlags;
 // Global vars for all NRF manipulations

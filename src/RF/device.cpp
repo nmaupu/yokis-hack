@@ -95,6 +95,20 @@ const char* Device::getStatusAsString(DeviceStatus status) {
 }
 
 // static
+const char* Device::getModeAsString(DeviceMode mode) {
+    switch (mode) {
+        case DIMMER:
+            return "DIMMER";
+        case ON_OFF:
+            return "ON_OFF";
+        case NO_RCPT:
+            return "NO_RCP";
+    }
+
+    return NULL;
+}
+
+// static
 const char* Device::getAvailabilityAsString(DeviceAvailability availability) {
     switch (availability) {
         case ONLINE:
@@ -187,7 +201,19 @@ bool Device::isOffline() { return this->availability == OFFLINE; }
 
 void Device::pollMePlease() { this->hasToBePolledForStatus = true; }
 
-void Device::pollingFinished() { this->hasToBePolledForStatus = false; }
+void Device::pollingSuccess() {
+    this->hasToBePolledForStatus = false;
+    this->failedPolls = 0;
+}
+
+uint8_t Device::pollingFailed() {
+    this->hasToBePolledForStatus = false;
+    return ++failedPolls;
+}
+
+uint8_t Device::getFailedPollings() {
+    return this->failedPolls;
+}
 
 void Device::toggleStatus() {
     switch (status) {
@@ -211,7 +237,7 @@ void Device::toSerial() {
     Serial.print("Availability: ");
     Serial.println(Device::getAvailabilityAsString(availability));
     Serial.print("mode: ");
-    Serial.println(mode);
+    Serial.println(Device::getModeAsString(mode));
     Serial.print("hw: ");
     Serial.print(hardwareAddress[0], HEX);
     Serial.print(" ");

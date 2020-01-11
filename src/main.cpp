@@ -211,10 +211,12 @@ void loop() {
 #if defined(ESP8266)
     g_mqtt->loop();
 
+    uint8_t nbDevices = 0;
     if (!mqttInit) {
         Serial.print("Publishing homeassistant discovery data... ");
         for (uint8_t i = 0; i < MQTT_MAX_NUM_OF_YOKIS_DEVICES; i++) {
             if (devices[i] != NULL) {
+                nbDevices++;
                 if (g_mqtt->publishDevice(devices[i])) {
                     g_mqtt->subscribeDevice(devices[i]);
                     mqttInit = true;
@@ -225,17 +227,17 @@ void loop() {
             }
         }
 
-        if (mqttInit) Serial.println("OK");
+        if (nbDevices == 0)
+            mqttInit = true;
+        if (mqttInit)
+            Serial.println("OK");
     } else {
         // Verify polling statuses and update via MQTT if needed
         for (uint8_t i = 0;
              i < MQTT_MAX_NUM_OF_YOKIS_DEVICES && FLAG_IS_ENABLED(FLAG_POLLING);
              i++) {
             if (devices[i] != NULL && devices[i]->needsPolling()) {
-                // devices[i]->pollingFinished();
                 pollForStatus(devices[i]);
-                // Serial.print("Polling device ");
-                // Serial.println(devices[i]->getName());
             }
         }
     }
@@ -564,10 +566,17 @@ void pollDevice(Device* d) {
 void pollForStatus(Device* d) {
     IrqManager::irqType = E2BP;
     g_bp->setDevice(d);
-    DeviceStatus ds = g_bp->pollForStatus();
-    d->pollingFinished();
+    DeviceStatus ds = g_bp->pollForStatus();    
 
     if (ds != UNDEFINED) {     // device reachable
+        if(d->getFailedPollings() > 0) {
+            Serial.print("Device ");
+            Serial.print(d->getName());
+            Serial.println(" recovered");
+        }
+
+        d->pollingSuccess();
+        
         if (d->isOffline()) {  // Device is back online
             d->online();
             g_mqtt->notifyOnline(d);
@@ -585,9 +594,21 @@ void pollForStatus(Device* d) {
             }
         }
     } else {
-        // Device is unreachable
-        d->offline();
-        g_mqtt->notifyOffline(d);
+        if (d->pollingFailed() >= DEVICE_MAX_FAILED_POLLING_BEFORE_OFFLINE){
+            // Device is unreachable
+            Serial.print("Device ");
+            Serial.print(d->getName());
+            Serial.println(" is offline");
+            d->offline();
+            g_mqtt->notifyOffline(d);
+        } else {
+            Serial.print("Failed to check device ");
+            Serial.print(d->getName());
+            Serial.print(" ");  
+            Serial.print(d->getFailedPollings(), DEC);
+            Serial.print("/");
+            Serial.println(DEVICE_MAX_FAILED_POLLING_BEFORE_OFFLINE, DEC);
+        }
     }
 }
 
