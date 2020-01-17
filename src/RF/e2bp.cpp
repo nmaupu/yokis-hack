@@ -167,7 +167,6 @@ bool E2bp::dimmerSet(const uint8_t number) {
 
 // Ask a device to give its status
 DeviceStatus E2bp::pollForStatus() {
-    // The idea is to send a wrong payload and wait for a response.
     // Using 0 for 'begin' packet seems to do the trick
     uint8_t buf[PAYLOAD_LENGTH];
     reset();

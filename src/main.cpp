@@ -533,7 +533,7 @@ bool reloadConfig(const char*) {
     for (uint8_t i = 0; i < MQTT_MAX_NUM_OF_YOKIS_DEVICES; i++) {
         if (devices[i] != NULL) {
             deviceStatusPollers[i] = new Ticker();
-            deviceStatusPollers[i]->attach_ms(random(3000, 6000), pollDevice,
+            deviceStatusPollers[i]->attach_ms(random(4000, 10000), pollDevice,
                                               devices[i]);
         }
     }
@@ -566,7 +566,7 @@ void pollDevice(Device* d) {
 void pollForStatus(Device* d) {
     IrqManager::irqType = E2BP;
     g_bp->setDevice(d);
-    DeviceStatus ds = g_bp->pollForStatus();    
+    DeviceStatus ds = g_bp->pollForStatus();
 
     if (ds != UNDEFINED) {     // device reachable
         if(d->getFailedPollings() > 0) {
@@ -576,7 +576,7 @@ void pollForStatus(Device* d) {
         }
 
         d->pollingSuccess();
-        
+
         if (d->isOffline()) {  // Device is back online
             d->online();
             g_mqtt->notifyOnline(d);
@@ -604,7 +604,7 @@ void pollForStatus(Device* d) {
         } else {
             Serial.print("Failed to check device ");
             Serial.print(d->getName());
-            Serial.print(" ");  
+            Serial.print(" ");
             Serial.print(d->getFailedPollings(), DEC);
             Serial.print("/");
             Serial.println(DEVICE_MAX_FAILED_POLLING_BEFORE_OFFLINE, DEC);
