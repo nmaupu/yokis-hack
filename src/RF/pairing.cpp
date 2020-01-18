@@ -23,7 +23,7 @@ bool Pairing::hackPairing() {
     timeout = millis() + HACK_TIMEOUT;
 
     if (!FLAG_IS_ENABLED(FLAG_RAW) || FLAG_IS_ENABLED(FLAG_DEBUG)) {
-        Serial.println("Hack started, click on the connect button when ready");
+        LOG.println("Hack started, click on the connect button when ready");
     }
 
     begin();
@@ -33,8 +33,8 @@ bool Pairing::hackPairing() {
         printDetails();
     }
 
-    Serial.print("Waiting... timeout=");
-    Serial.println(HACK_TIMEOUT);
+    LOG.print("Waiting... timeout=");
+    LOG.println(HACK_TIMEOUT);
 
     while (millis() < timeout && readsCount < 2) {
         delay(10);
@@ -45,7 +45,7 @@ bool Pairing::hackPairing() {
         return true;
     }
 
-    Serial.println("Timeout waiting for data, aborting.");
+    LOG.println("Timeout waiting for data, aborting.");
     return false;
 }
 
@@ -73,14 +73,14 @@ void Pairing::prepareForReading(uint8_t payloadSize) {
 ICACHE_RAM_ATTR
 #endif
 void Pairing::interruptTxOk() {
-    Serial.println("TX sent interrupt");
+    LOG.println("TX sent interrupt");
 }
 
 #if defined(ESP8266)
 ICACHE_RAM_ATTR
 #endif
 void Pairing::interruptRxReady() {
-    // Serial.println("Pairing RX received");
+    // LOG.println("Pairing RX received");
     if (available()) {
         readsCount++;
         read(recvBufferAddr, getPayloadSize());
@@ -103,7 +103,7 @@ void Pairing::interruptRxReady() {
 ICACHE_RAM_ATTR
 #endif
 void Pairing::interruptTxFailed() {
-    //Serial.println("TX sent failed interrupt");
+    //LOG.println("TX sent failed interrupt");
 }
 
 #if defined(ESP8266)
@@ -112,12 +112,12 @@ ICACHE_RAM_ATTR
 void Pairing::_debugPrintRecv(byte* recvBuf, uint8_t s) {
     if (!FLAG_IS_ENABLED(FLAG_DEBUG)) return;
 
-    Serial.print("Buffer data: ");
+    LOG.print("Buffer data: ");
     for (uint8_t i = 0; i < s; i++) {
-        Serial.print(recvBuf[i], HEX);
-        Serial.print(" ");
+        LOG.print(recvBuf[i], HEX);
+        LOG.print(" ");
     }
-    Serial.println();
+    LOG.println();
 }
 
 // Get address on which communication occur with the device after successful
@@ -160,7 +160,7 @@ void Pairing::_printPairingInfoRaw() {
 
     sprintf(buf, "address=%02x%02x%02x%02x%02x,channel=%02x", addr[0], addr[1],
             addr[2], addr[3], addr[4], channel);
-    Serial.println(buf);
+    LOG.println(buf);
 }
 
 void Pairing::_printPairingInfoFormat() {
@@ -169,13 +169,13 @@ void Pairing::_printPairingInfoFormat() {
     byte channel = getChannelFromRecvData();
     getAddressFromRecvData(addr);
 
-    Serial.println("Here are the info got from the device:");
+    LOG.println("Here are the info got from the device:");
 
-    Serial.print("  Address: ");
+    LOG.print("  Address: ");
     sprintf(buf, "%02x %02x %02x %02x %02x", addr[0], addr[1], addr[2], addr[3],
             addr[4]);
-    Serial.println(buf);
+    LOG.println(buf);
 
-    Serial.print("  Channel: ");
-    Serial.println(channel, HEX);
+    LOG.print("  Channel: ");
+    LOG.println(channel, HEX);
 }

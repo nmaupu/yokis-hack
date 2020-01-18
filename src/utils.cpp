@@ -1,5 +1,5 @@
 #include "utils.h"
-
+#include "globals.h"
 #include <Arduino.h>
 
 void printBinaryRepresentation(uint8_t n, bool leadingZero = false) {
@@ -21,5 +21,5 @@ void printBinaryRepresentation(uint8_t n, bool leadingZero = false) {
         *--str = '0';
     }
 
-    Serial.print(str);
+    LOG.print(str);
 }

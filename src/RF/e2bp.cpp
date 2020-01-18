@@ -123,7 +123,7 @@ bool E2bp::dimmerMin() { return dimmerSet(4); }
 bool E2bp::dimmerNiL() { return dimmerSet(7); }
 bool E2bp::dimmerSet(const uint8_t number) {
     if (device->getMode() != DIMMER) {
-        Serial.println("Not a dimmer device, ignoring.");
+        LOG.println("Not a dimmer device, ignoring.");
         return false;
     }
 
@@ -192,7 +192,7 @@ bool E2bp::press() { return press(false); }
 
 bool E2bp::press(bool dim) {
     bool ret = true;
-    if (IS_DEBUG_ENABLED) Serial.println("Button pressing");
+    if (IS_DEBUG_ENABLED) LOG.println("Button pressing");
     uint8_t buf[PAYLOAD_LENGTH];
 
     firstPayloadStatus = UNDEFINED;
@@ -202,19 +202,19 @@ bool E2bp::press(bool dim) {
         getPayload(buf, PL_BEGIN);
     ret = sendPayload(buf);
 
-    if (IS_DEBUG_ENABLED) Serial.println("Button pressed");
+    if (IS_DEBUG_ENABLED) LOG.println("Button pressed");
     return ret;
 }
 
 bool E2bp::release() {
     bool ret = true;
-    if (IS_DEBUG_ENABLED) Serial.println("Button releasing");
+    if (IS_DEBUG_ENABLED) LOG.println("Button releasing");
     uint8_t buf[PAYLOAD_LENGTH];
 
     getPayload(buf, PL_END);
     ret = sendPayload(buf);
 
-    if (IS_DEBUG_ENABLED) Serial.println("Button released");
+    if (IS_DEBUG_ENABLED) LOG.println("Button released");
     if (ret && device->getMode() == ON_OFF) {
         device->setStatus(getLastKnownDeviceStatus());
     } else if (ret && device->getMode() == DIMMER) {
@@ -295,12 +295,12 @@ uint8_t* E2bp::getPayload(uint8_t* buf, PayloadType type) {
 
 bool E2bp::sendPayload(const uint8_t* payload) {
     if (IS_DEBUG_ENABLED) {
-        Serial.print("Payload: ");
+        LOG.print("Payload: ");
         for (uint8_t i = 0; i < 9; i++) {
-            Serial.print(payload[i], HEX);
-            Serial.print(" ");
+            LOG.print(payload[i], HEX);
+            LOG.print(" ");
         }
-        Serial.println();
+        LOG.println();
     }
 
     setupPayload(payload);
@@ -378,11 +378,11 @@ bool E2bp::runMainLoop() {
         read(answerBuf, 2);
 
         if (IS_DEBUG_ENABLED) {
-            Serial.print("Received: ");
+            LOG.print("Received: ");
             printBinaryRepresentation(answerBuf[0], true);
-            Serial.print(" ");
+            LOG.print(" ");
             printBinaryRepresentation(answerBuf[1], true);
-            Serial.println();
+            LOG.println();
         }
 
         if (firstPayloadStatus == UNDEFINED)
@@ -415,7 +415,7 @@ ICACHE_RAM_ATTR
 #endif
 void E2bp::interruptTxOk() {
     if (IS_DEBUG_ENABLED) {
-        Serial.println("E2bp - TX OK");
+        LOG.println("E2bp - TX OK");
     }
     write_register(NRF_CONFIG, 0b00001111);  // PRX
     ce(HIGH);
@@ -427,7 +427,7 @@ ICACHE_RAM_ATTR
 #endif
 void E2bp::interruptRxReady() {
     if (IS_DEBUG_ENABLED) {
-        Serial.println("E2bp - RX READY");
+        LOG.println("E2bp - RX READY");
     }
     // counter++;
     stopMainLoop();
@@ -438,5 +438,5 @@ ICACHE_RAM_ATTR
 #endif
 void E2bp::interruptTxFailed() {
     // Ignore
-    Serial.println("TX sent failed");
+    LOG.println("TX sent failed");
 }

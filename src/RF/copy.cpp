@@ -1,5 +1,4 @@
 #include "RF/copy.h"
-#include "globals.h"
 
 Copy::Copy(uint16_t cepin, uint16_t cspin, Device* device)
     : Pairing(cepin, cspin) {
@@ -49,12 +48,13 @@ bool Copy::send() {
         delay(1);  // let time to send packets
     }
 
-    Serial.print(device->getName());
+    /*
+    LOG.print(device->getName());
     if (isFailed) {
-        Serial.println(" - Copy failed.");
+        LOG.println(" - Copy failed.");
     } else {
-        Serial.println(" - Copied successfully.");
-    }
+        LOG.println(" - Copied successfully.");
+    }*/
 
     return !isFailed;
 }

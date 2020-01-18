@@ -91,9 +91,9 @@ bool MqttHass::publishDevice(const Device* device) {
     char* payload = newMessageJson(device);
 
     /*
-    Serial.print(topic);
-    Serial.print("=");
-    Serial.println(payload);
+    LOG.print(topic);
+    LOG.print("=");
+    LOG.println(payload);
     */
 
     ret = this->publish(topic, payload, true);

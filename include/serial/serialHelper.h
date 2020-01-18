@@ -4,6 +4,9 @@
 
 #include "RF/pairing.h"
 #include "serial/serialCallback.h"
+#ifdef ESP8266
+#include <TelnetSpy.h>
+#endif
 
 #define MAX_NUMBER_OF_COMMANDS 32
 #define MAX_COMMAND_LENGTH 32

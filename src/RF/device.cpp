@@ -231,29 +231,29 @@ void Device::toggleStatus() {
 }
 
 void Device::toSerial() {
-    Serial.print(name);
-    Serial.print(" - status=");
-    Serial.println(Device::getStatusAsString(status));
-    Serial.print("Availability: ");
-    Serial.println(Device::getAvailabilityAsString(availability));
-    Serial.print("mode: ");
-    Serial.println(Device::getModeAsString(mode));
-    Serial.print("hw: ");
-    Serial.print(hardwareAddress[0], HEX);
-    Serial.print(" ");
-    Serial.println(hardwareAddress[1], HEX);
-    Serial.print("channel: ");
-    Serial.println(channel, HEX);
-    Serial.print("serial/version: ");
-    Serial.print(serial[0], HEX);
-    Serial.print(" ");
-    Serial.print(serial[1], HEX);
-    Serial.print("/");
-    Serial.print(version[0], HEX);
-    Serial.print(" ");
-    Serial.print(version[1], HEX);
-    Serial.print(" ");
-    Serial.println(version[2], HEX);
+    LOG.print(name);
+    LOG.print(" - status=");
+    LOG.println(Device::getStatusAsString(status));
+    LOG.print("Availability: ");
+    LOG.println(Device::getAvailabilityAsString(availability));
+    LOG.print("mode: ");
+    LOG.println(Device::getModeAsString(mode));
+    LOG.print("hw: ");
+    LOG.print(hardwareAddress[0], HEX);
+    LOG.print(" ");
+    LOG.println(hardwareAddress[1], HEX);
+    LOG.print("channel: ");
+    LOG.println(channel, HEX);
+    LOG.print("serial/version: ");
+    LOG.print(serial[0], HEX);
+    LOG.print(" ");
+    LOG.print(serial[1], HEX);
+    LOG.print("/");
+    LOG.print(version[0], HEX);
+    LOG.print(" ");
+    LOG.print(version[1], HEX);
+    LOG.print(" ");
+    LOG.println(version[2], HEX);
 }
 
 // Copy all fields from given device to this device
@@ -317,8 +317,8 @@ bool Device::saveToSpiffs() {
 
     File f = SPIFFS.open(SPIFFS_CONFIG_FILENAME, "a+");
     if (!f) {
-        Serial.print(SPIFFS_CONFIG_FILENAME);
-        Serial.println(" - file open failed");
+        LOG.print(SPIFFS_CONFIG_FILENAME);
+        LOG.println(" - file open failed");
         return false;
     }
 
@@ -329,8 +329,8 @@ bool Device::saveToSpiffs() {
             version[2], SEP, serial[0], serial[1], SEP, mode);
     int bytesWritten = f.println(buf);
     if (bytesWritten <= 0) {
-        Serial.print(SPIFFS_CONFIG_FILENAME);
-        Serial.println(" - cannot write to file");
+        LOG.print(SPIFFS_CONFIG_FILENAME);
+        LOG.println(" - cannot write to file");
         ret = false;
     }
 
@@ -357,8 +357,8 @@ void Device::loadFromSpiffs(Device** devices, const unsigned int size) {
 
     File f = SPIFFS.open(SPIFFS_CONFIG_FILENAME, "r");
     if (!f) {
-        Serial.print(SPIFFS_CONFIG_FILENAME);
-        Serial.println(" - File open failed");
+        LOG.print(SPIFFS_CONFIG_FILENAME);
+        LOG.println(" - File open failed");
         return;
     }
 
@@ -416,8 +416,8 @@ void Device::loadFromSpiffs(Device** devices, const unsigned int size) {
 
         // Store this device
         devices[numLines++] = d;
-        Serial.print("Added new device: ");
-        Serial.println(d->getName());
+        LOG.print("Added new device: ");
+        LOG.println(d->getName());
     }
 
     f.close();
@@ -427,9 +427,9 @@ void Device::loadFromSpiffs(Device** devices, const unsigned int size) {
 void Device::displayConfigFromSpiffs() {
     Device::spiffsInit();
     File f = SPIFFS.open(SPIFFS_CONFIG_FILENAME, "r");
-    Serial.println("SPIFFS configuration stored:");
+    LOG.println("SPIFFS configuration stored:");
     while (f.available()) {
-        Serial.write(f.read());
+        LOG.write(f.read());
     }
     f.close();
 }
@@ -453,7 +453,7 @@ int Device::findInConfig(const char* deviceName) {
 
     File f = SPIFFS.open(SPIFFS_CONFIG_FILENAME, "r");
     if (!f) {
-        Serial.println("File open failed");
+        LOG.println("File open failed");
         return -1;
     }
 
@@ -482,14 +482,14 @@ void Device::deleteLineInConfig(int line) {
 
     File f = SPIFFS.open(SPIFFS_CONFIG_FILENAME, "r");
     if (!f) {
-        Serial.print(SPIFFS_CONFIG_FILENAME);
-        Serial.println(" - File open failed");
+        LOG.print(SPIFFS_CONFIG_FILENAME);
+        LOG.println(" - File open failed");
         return;
     }
     File fbak = SPIFFS.open(SPIFFS_CONFIG_BAK_FILENAME, "w");
     if (!fbak) {
-        Serial.print(SPIFFS_CONFIG_BAK_FILENAME);
-        Serial.println(" - File open failed");
+        LOG.print(SPIFFS_CONFIG_BAK_FILENAME);
+        LOG.println(" - File open failed");
         return;
     }
 
@@ -499,7 +499,7 @@ void Device::deleteLineInConfig(int line) {
         if (currentLine++ != line) {
             int bytesWritten = fbak.println(buf);
             if (bytesWritten <= 0) {
-                Serial.println("Cannot write to backup configuration file");
+                LOG.println("Cannot write to backup configuration file");
             }
         }
     }

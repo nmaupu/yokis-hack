@@ -6,5 +6,5 @@
 
 void setupWifi();
 
-#endif
-#endif
+#endif  // __WIFI_H__
+#endif  // ESP8266

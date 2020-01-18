@@ -9,9 +9,11 @@
 #include "serial/genericCallback.h"
 #include "serial/serialHelper.h"
 #ifdef ESP8266
+#include <ArduinoOTA.h>
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 #include <Ticker.h>
+#include <WiFiUdp.h>
 #include "net/mqttHass.h"
 #include "net/wifi.h"
 #endif
@@ -25,6 +27,7 @@ Scanner* g_scanner;
 Copy* g_copy;
 #ifdef ESP8266
 MqttHass* g_mqtt;
+TelnetSpy g_telnetAndSerial;
 // no need to store more devices than supported by MQTT
 Device* devices[MQTT_MAX_NUM_OF_YOKIS_DEVICES];
 #endif
@@ -128,6 +131,36 @@ void setup() {
     setupWifi();
     g_mqtt = new MqttHass(espClient, host, &port, mqttUser, mqttPassword);
     g_mqtt->setCallback(mqttCallback);
+
+    // OTA
+    ArduinoOTA.onStart([]() {
+        String type;
+        if (ArduinoOTA.getCommand() == U_FLASH) {
+            type = "sketch";
+        } else {  // U_FS
+            type = "filesystem";
+        }
+        LOG.println("Start updating " + type);
+    });
+    ArduinoOTA.onEnd([]() { LOG.println("\nEnd"); });
+    ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+        LOG.printf("Progress: %u%%\r", (progress / (total / 100)));
+    });
+    ArduinoOTA.onError([](ota_error_t error) {
+        LOG.printf("Error[%u]: ", error);
+        if (error == OTA_AUTH_ERROR) {
+            LOG.println("Auth Failed");
+        } else if (error == OTA_BEGIN_ERROR) {
+            LOG.println("Begin Failed");
+        } else if (error == OTA_CONNECT_ERROR) {
+            LOG.println("Connect Failed");
+        } else if (error == OTA_RECEIVE_ERROR) {
+            LOG.println("Receive Failed");
+        } else if (error == OTA_END_ERROR) {
+            LOG.println("End Failed");
+        }
+    });
+    ArduinoOTA.begin();
 #endif
 
     // Serial setup
@@ -202,18 +235,21 @@ void setup() {
                     FALLING);
 
     printf_begin();  // Works only for Arduino devices...
+    LOG.println("Setup finished - device ready !");
     g_serial->executeCallback("help");
-    Serial.println();
+    LOG.println();
     g_serial->prompt();
 }
 
 void loop() {
 #if defined(ESP8266)
+    LOG.handle();
+    ArduinoOTA.handle();
     g_mqtt->loop();
 
     uint8_t nbDevices = 0;
     if (!mqttInit) {
-        Serial.print("Publishing homeassistant discovery data... ");
+        LOG.print("Publishing homeassistant discovery data... ");
         for (uint8_t i = 0; i < MQTT_MAX_NUM_OF_YOKIS_DEVICES; i++) {
             if (devices[i] != NULL) {
                 nbDevices++;
@@ -221,16 +257,14 @@ void loop() {
                     g_mqtt->subscribeDevice(devices[i]);
                     mqttInit = true;
                 } else {
-                    Serial.println("KO");
+                    LOG.println("KO");
                     break;
                 }
             }
         }
 
-        if (nbDevices == 0)
-            mqttInit = true;
-        if (mqttInit)
-            Serial.println("OK");
+        if (nbDevices == 0) mqttInit = true;
+        if (mqttInit) LOG.println("OK");
     } else {
         // Verify polling statuses and update via MQTT if needed
         for (uint8_t i = 0;
@@ -304,7 +338,7 @@ bool changeDeviceState(const char* params, bool (E2bp::*func)(void)) {
     Device* d = getDeviceFromParams(params);
 
     if (d == NULL || d->getHardwareAddress() == NULL) {
-        Serial.println("No such device");
+        LOG.println("No such device");
         return false;
     }
 
@@ -337,14 +371,14 @@ bool offCallback(const char* params) {
 
 bool scannerCallback(const char* params) {
     if (FLAG_IS_ENABLED(FLAG_POLLING)) {
-        Serial.println("Disable polling before attempting to scan ! Aborting.");
+        LOG.println("Disable polling before attempting to scan ! Aborting.");
         return false;
     }
 
     Device* d = getDeviceFromParams(params);
 
     if (d == NULL || d->getHardwareAddress() == NULL) {
-        Serial.println("No such device");
+        LOG.println("No such device");
         return false;
     }
 
@@ -359,7 +393,7 @@ bool copyCallback(const char* params) {
     Device* d = getDeviceFromParams(params);
 
     if (d == NULL || d->getHardwareAddress() == NULL) {
-        Serial.println("No such device");
+        LOG.println("No such device");
         return false;
     }
 
@@ -372,9 +406,9 @@ bool displayDevices(const char*) {
 #ifdef ESP8266
     uint8_t c = 0;
     while (devices[c] != NULL) {
-        Serial.println("=== Device ===");
+        LOG.println("=== Device ===");
         devices[c]->toSerial();
-        Serial.println("==============");
+        LOG.println("==============");
         c++;
     }
 #else
@@ -409,7 +443,7 @@ bool pressCallback(const char* params) {
     Device* d = getDeviceFromParams(params);
 
     if (d == NULL || d->getHardwareAddress() == NULL) {
-        Serial.println("No such device");
+        LOG.println("No such device");
         return false;
     }
 
@@ -425,7 +459,7 @@ bool pressForCallback(const char* params) {
     Device* d = getDeviceFromParams(params);
 
     if (d == NULL || d->getHardwareAddress() == NULL) {
-        Serial.println("No such device");
+        LOG.println("No such device");
         return false;
     }
 
@@ -449,7 +483,7 @@ bool releaseCallback(const char* params) {
     Device* d = getDeviceFromParams(params);
 
     if (d == NULL || d->getHardwareAddress() == NULL) {
-        Serial.println("No such device");
+        LOG.println("No such device");
         return false;
     }
 
@@ -465,7 +499,7 @@ bool statusCallback(const char* params) {
     Device* d = getDeviceFromParams(params);
 
     if (d == NULL || d->getHardwareAddress() == NULL) {
-        Serial.println("No such device");
+        LOG.println("No such device");
         return false;
     }
 
@@ -473,8 +507,8 @@ bool statusCallback(const char* params) {
     g_bp->setDevice(d);
     DeviceStatus st = g_bp->pollForStatus();
 
-    Serial.print("Device Status = ");
-    Serial.println(Device::getStatusAsString(st));
+    LOG.print("Device Status = ");
+    LOG.println(Device::getStatusAsString(st));
 
     return true;
 }
@@ -500,7 +534,7 @@ bool storeConfigCallback(const char* params) {
     }
 
     ret = currentDevice->saveToSpiffs();
-    if (ret) Serial.println("Saved.");
+    if (ret) LOG.println("Saved.");
 
     // reset default name
     currentDevice->setName(CURRENT_DEVICE_DEFAULT_NAME);
@@ -537,7 +571,7 @@ bool reloadConfig(const char*) {
                                               devices[i]);
         }
     }
-    Serial.println("Reloaded.");
+    LOG.println("Reloaded.");
     return true;
 }
 
@@ -568,11 +602,11 @@ void pollForStatus(Device* d) {
     g_bp->setDevice(d);
     DeviceStatus ds = g_bp->pollForStatus();
 
-    if (ds != UNDEFINED) {     // device reachable
-        if(d->getFailedPollings() > 0) {
-            Serial.print("Device ");
-            Serial.print(d->getName());
-            Serial.println(" recovered");
+    if (ds != UNDEFINED) {  // device reachable
+        if (d->getFailedPollings() > 0) {
+            LOG.print("Device ");
+            LOG.print(d->getName());
+            LOG.println(" recovered");
         }
 
         d->pollingSuccess();
@@ -594,20 +628,20 @@ void pollForStatus(Device* d) {
             }
         }
     } else {
-        if (d->pollingFailed() >= DEVICE_MAX_FAILED_POLLING_BEFORE_OFFLINE){
+        if (d->pollingFailed() >= DEVICE_MAX_FAILED_POLLING_BEFORE_OFFLINE) {
             // Device is unreachable
-            Serial.print("Device ");
-            Serial.print(d->getName());
-            Serial.println(" is offline");
+            LOG.print("Device ");
+            LOG.print(d->getName());
+            LOG.println(" is offline");
             d->offline();
             g_mqtt->notifyOffline(d);
         } else {
-            Serial.print("Failed to check device ");
-            Serial.print(d->getName());
-            Serial.print(" ");
-            Serial.print(d->getFailedPollings(), DEC);
-            Serial.print("/");
-            Serial.println(DEVICE_MAX_FAILED_POLLING_BEFORE_OFFLINE, DEC);
+            LOG.print("Failed to check device ");
+            LOG.print(d->getName());
+            LOG.print(" ");
+            LOG.print(d->getFailedPollings(), DEC);
+            LOG.print("/");
+            LOG.println(DEVICE_MAX_FAILED_POLLING_BEFORE_OFFLINE, DEC);
         }
     }
 }
@@ -637,14 +671,14 @@ void mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
     // If we update this device too soon, ignore the payload
     unsigned long now = millis();
     if (d->getLastUpdateMillis() + MQTT_UPDATE_MILLIS_WINDOW > now) {
-        Serial.println(
+        LOG.println(
             "Ignoring MQTT message: received too soon for this device");
-        Serial.print("Last update: ");
-        Serial.println(d->getLastUpdateMillis(), DEC);
-        Serial.print("This update: ");
-        Serial.println(now, DEC);
-        Serial.print("Difference: ");
-        Serial.println(now - d->getLastUpdateMillis());
+        LOG.print("Last update: ");
+        LOG.println(d->getLastUpdateMillis(), DEC);
+        LOG.print("This update: ");
+        LOG.println(now, DEC);
+        LOG.print("Difference: ");
+        LOG.println(now - d->getLastUpdateMillis());
 
         delete[] mTopic;
         delete[] mTokBuf;

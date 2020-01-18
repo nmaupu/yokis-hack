@@ -4,7 +4,7 @@
 #include "serial/usageCallback.h"
 
 SerialHelper::SerialHelper() {
-    Serial.begin(SERIAL_BAUDRATE);
+    LOG.begin(SERIAL_BAUDRATE);
     callbacksIndex = 0;
     longestCommandLength = 0;
     currentCommandIdx = 0;
@@ -36,37 +36,37 @@ void SerialHelper::readFromSerial(void) {
     char currentChar;
 
     if(currentCommandIdx >= MAX_COMMAND_FULL_LENGTH) {
-        Serial.println();
-        Serial.println("Command too long. Aborting.");
-        while (Serial.available()) Serial.read(); // empty serial buffer
+        LOG.println();
+        LOG.println("Command too long. Aborting.");
+        while (LOG.available()) LOG.read(); // empty serial buffer
         currentCommandIdx = 0;
         prompt();
     }
 
-    if (Serial.available() > 0) {
-        currentChar = Serial.read();
-        //Serial.println(currentChar, HEX);
+    if (LOG.available() > 0) {
+        currentChar = LOG.read();
+        //LOG.println(currentChar, HEX);
         if (currentChar != 0x0a && currentChar != 0x0d) { // \n or \r
             switch (currentChar) {
                 case 0x08: // BS
                 case 0x7f: // DEL
                     if(currentCommandIdx > 0) {
                         currentCommandIdx--;
-                        Serial.write(0x08);
-                        Serial.write(' ');
-                        Serial.write(0x08);
+                        LOG.write(0x08);
+                        LOG.write(' ');
+                        LOG.write(0x08);
                     }
                     break;
                 default:
                     currentCommand[currentCommandIdx++] = currentChar;
-                    Serial.print(currentChar);
+                    LOG.print(currentChar);
             }
 
-            Serial.flush();
+            LOG.flush();
         } else if (currentChar == 0x0d) { // \r
             // we ignore \n, some TTY send them, some don't but we don't want to process twice if both are sent
             currentCommand[currentCommandIdx] = '\0';
-            Serial.println();
+            LOG.println();
 
             // Looking for a command to execute
             char extractedCommand[32];
@@ -75,10 +75,10 @@ void SerialHelper::readFromSerial(void) {
             bool found = executeCallback(extractedCommand);
             if (!found) {
                 sprintf(buf, "%s: command not found", extractedCommand);
-                Serial.println(buf);
+                LOG.println(buf);
             }
 
-            Serial.println();
+            LOG.println();
             currentCommandIdx = 0;
             prompt();
         }
@@ -108,29 +108,29 @@ void SerialHelper::extractCommand(char* buf) {
 }
 
 void SerialHelper::usage() {
-    Serial.println(PROG_TITLE);
-    Serial.println();
+    LOG.println(PROG_TITLE);
+    LOG.println();
     for (uint8_t i = 0; i < callbacksIndex; i++) {
-        Serial.print(callbacks[i]->getCommand());
+        LOG.print(callbacks[i]->getCommand());
         unsigned int nbSpaces =
             longestCommandLength - strlen(callbacks[i]->getCommand());
-        for (uint8_t j = 0; j < nbSpaces + 1; j++) Serial.print(" ");
-        Serial.println(callbacks[i]->getHelp());
+        for (uint8_t j = 0; j < nbSpaces + 1; j++) LOG.print(" ");
+        LOG.println(callbacks[i]->getHelp());
     }
 }
 
 bool SerialHelper::displayConfig(void) {
-    Serial.print("Config:");
-    Serial.print(" DEBUG=");
-    Serial.print(IS_DEBUG_ENABLED);
-    Serial.print(" RAW=");
-    Serial.print(FLAG_IS_ENABLED(FLAG_RAW));
-    Serial.print(" POLLING=");
-    Serial.print(FLAG_IS_ENABLED(FLAG_POLLING));
-    Serial.println();
+    LOG.print("Config:");
+    LOG.print(" DEBUG=");
+    LOG.print(IS_DEBUG_ENABLED);
+    LOG.print(" RAW=");
+    LOG.print(FLAG_IS_ENABLED(FLAG_RAW));
+    LOG.print(" POLLING=");
+    LOG.print(FLAG_IS_ENABLED(FLAG_POLLING));
+    LOG.println();
     return true;
 }
 
 void SerialHelper::prompt() {
-    Serial.print("> ");
+    LOG.print("> ");
 }

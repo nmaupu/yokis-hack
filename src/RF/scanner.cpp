@@ -1,4 +1,5 @@
 #include "RF/scanner.h"
+#include "globals.h"
 
 #define BUFFER_MAX 9
 
@@ -26,12 +27,12 @@ ICACHE_RAM_ATTR
 void Scanner::interruptRxReady() {
     if (available()) {
         read(buf, BUFFER_MAX);
-        Serial.print("Received : ");
+        LOG.print("Received : ");
         for (uint8_t i = 0; i < BUFFER_MAX; i++) {
-            Serial.print(buf[i], HEX);
-            Serial.print(" ");
+            LOG.print(buf[i], HEX);
+            LOG.print(" ");
         }
-        Serial.println();
+        LOG.println();
     }
 }
 

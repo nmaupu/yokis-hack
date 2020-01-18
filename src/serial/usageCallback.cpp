@@ -1,4 +1,5 @@
 #include "serial/usageCallback.h"
+#include "globals.h"
 
 UsageCallback::UsageCallback(const char* command, const char* help, SerialHelper* serialHelper)
     : SerialCallback(command, help) {
@@ -7,7 +8,7 @@ UsageCallback::UsageCallback(const char* command, const char* help, SerialHelper
 
 bool UsageCallback::commandCallback(const char* params) {
     this->serialHelper->usage();
-    Serial.println();
+    LOG.println();
     SerialHelper::displayConfig();
     return true;
 }

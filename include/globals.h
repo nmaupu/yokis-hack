@@ -59,6 +59,11 @@ extern Scanner* g_scanner;
 extern Copy* g_copy;
 #ifdef ESP8266
 extern MqttHass* g_mqtt;
+// Serial configuration over telnet
+extern TelnetSpy g_telnetAndSerial;
+#define LOG g_telnetAndSerial
+#else
+#define LOG Serial
 #endif
 
 #define FLAG_DEBUG (1 << 0)

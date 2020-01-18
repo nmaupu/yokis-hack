@@ -2,7 +2,6 @@
 #define __UTILS_H__
 
 #include <Arduino.h>
-#include "RF/device.h"
 
 void printBinaryRepresentation(uint8_t, bool);
 

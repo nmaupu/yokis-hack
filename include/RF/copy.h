@@ -1,8 +1,8 @@
 #ifndef __COPY_H__
 #define __COPY_H__
 
-#include "RF/pairing.h"
 #include "RF/device.h"
+#include "RF/pairing.h"
 
 #define FIRST_PAYLOAD_SIZE  3
 #define SECOND_PAYLOAD_SIZE 5

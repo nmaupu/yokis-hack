@@ -288,7 +288,7 @@ class RF24_forked {
      * @code
      * #include <printf.h>
      * setup(){
-     *  Serial.begin(115200);
+     *  LOG.begin(115200);
      *  printf_begin();
      *  ...
      * }
@@ -306,8 +306,8 @@ class RF24_forked {
      * uint8_t pipeNum;
      * if(radio.available(&pipeNum)){
      *   radio.read(&data,sizeof(data));
-     *   Serial.print("Got data on pipe");
-     *   Serial.println(pipeNum);
+     *   LOG.print("Got data on pipe");
+     *   LOG.println(pipeNum);
      * }
      * @endcode
      * @return True if there is a payload available, false if none is
@@ -648,7 +648,7 @@ class RF24_forked {
      * @code
      * bool goodSignal = radio.testRPD();
      * if(radio.available()){
-     *    Serial.println(goodSignal ? "Strong signal > 64dBm" : "Weak signal <
+     *    LOG.println(goodSignal ? "Strong signal > 64dBm" : "Weak signal <
      * 64dBm" ); radio.read(0,0);
      * }
      * @endcode
