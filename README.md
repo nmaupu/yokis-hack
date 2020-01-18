@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/nmaupu/yokis-hack.svg?branch=master)](https://travis-ci.org/nmaupu/yokis-hack)
+
 # yokis-hack
 
 Yokis-hack is a project around the reverse engineering of Yokis devices, a french company building stuff for home automation.
@@ -25,7 +27,8 @@ I never tested devices made for shutters (MVR500ER) because I don't have those..
 
 ## Download
 
-No download available for now, you have to build yourself... Coming soon though.
+No download available for now, you have to build yourself...
+Coming soon though I hope.
 
 ## Building
 
@@ -50,6 +53,17 @@ MQTT_PASSWORD="<MQTT_PASSWORD>" \
 WIFI_SSID="<SSID>" \
 WIFI_PASSWORD="<WIFI_KEY>" \
   pio run -e d1_mini
+```
+
+First upload has to be done using an usb cable. However, all subsequent upgrades can be done using OTA as such (use `d1_mini_ota` instead of `d1_mini`):
+```
+MQTT_IP="<MQTT_IP>" \
+MQTT_PORT="<MQTT_PORT>" \
+MQTT_USERNAME="<MQTT_USERNAME>" \
+MQTT_PASSWORD="<MQTT_PASSWORD>" \
+WIFI_SSID="<SSID>" \
+WIFI_PASSWORD="<WIFI_KEY>" \
+  pio run -e d1_mini_ota --upload_port=<ip_address>
 ```
 
 ## Usage
@@ -86,6 +100,7 @@ For example, here are the pinout of my testing MCUs:
 | MOSI | D7            | 51           |
 | MISO | D6            | 50           |
 
+
 ### Firmware usage
 
 #### Features
@@ -94,11 +109,15 @@ If you use Arduino, a very small set of features are available. Use an ESP8266 f
 
 The following features are available:
 - Command line interface over serial (115200 bauds)
+- Serial over Telnet connection
+- OTA upgrades
 - Home Assistant auto discovery (with prefix `/homeassistant` as describe on [Home Assistant documentation](https://www.home-assistant.io/docs/mqtt/discovery/))
 
 From serial, one can use the following commands:
 
+**Note:** To use telnet, just get the ip address of the device and use `telnet <ip>` to get the serial commands over Telnet.
 **Note:** When you pair a device, its configuration is stored and can be use for various commands if you don't pass any `device_name` as parameter. If you pair a new device, it replaces the stored configuration.
+
 
 | command   | paramters       | help                                                                                                |
 |-----------|-----------------|-----------------------------------------------------------------------------------------------------|
