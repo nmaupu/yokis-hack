@@ -63,7 +63,7 @@ MQTT_USERNAME="<MQTT_USERNAME>" \
 MQTT_PASSWORD="<MQTT_PASSWORD>" \
 WIFI_SSID="<SSID>" \
 WIFI_PASSWORD="<WIFI_KEY>" \
-  pio run -e d1_mini_ota --upload_port=<ip_address>
+  pio run -e d1_mini_ota --upload-port=<ip_address>
 ```
 
 ## Usage
@@ -157,6 +157,8 @@ After adding your devices, you don't need serial anymore.
 On the serial, use the `pair` command for each device you want to store and `save` it to config:
 - `pair`
 - click on the *connect* button on the back of the device
+- `save <device_name>`
+- `reload`
 
 Instead of pressing the *connect* button at the back of the device which is sometimes not accessible. You can use an already paired remote:
 - use the `pair` command like before
@@ -164,18 +166,18 @@ Instead of pressing the *connect* button at the back of the device which is some
 
 ##### Program a genuine Yokis remote
 
-You (re)configure a genuine yokis remote, using the `copy` command like so:
-- put the remote in pairing mode (5 short press on a button)
-- use the `copy` command
+To (re)configure a genuine yokis remote, use the *copy* command like so:
+- put the remote in pairing mode (5 short presses on a button)
+- use the `copy` command from the serial
 
 ### MQTT reference
 
 Published topics:
 - Auto discovery uses Home Assistant prefix: `homeassistant/`.
-- Device's state is sent using the following topic pattern:
+- Device's state is sent using the following topic patterns:
   - `<device_name>/tele/LWT` = `{Online,Offline}`
   - `<device_name>/tele/STATE` = `{"POWER":"On"}` or `{"POWER":"Off"}`
-  - `<device_name>/tele/BRIGHTNESS` = `{"BRIGHTNESS":"value"}` where `value` is `0`, `1`, `2`, `3` or `4`. `3` and `4` are the same.
+  - `<device_name>/tele/BRIGHTNESS` = `{"BRIGHTNESS":"value"}` where `value` is `0`, `1`, `2`, `3` or `4`. `3` and `4` are the same and set the device to *MAX* brightness.
 
 Subscribed topics:
 - `<device_name>/cmnd/POWER`: `ON` or `OFF`

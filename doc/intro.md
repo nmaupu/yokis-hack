@@ -151,10 +151,10 @@ Same thing, plugged in to the SPI and dumping everything when a button is presse
 After several data extract, I ended up with the following:
 
 
-|    | Register       | Content                       | Remark |
-|----|----------------|-------------------------------|--------|
+|    | Register       | Content       | payload       | Remark |
+|----|----------------|---------------|---------------|--------|
 | 1  | `FLUSH_TX`     |
-| 2  | `W_TX_PAYLOAD` | `35 04 00 20 cc 17 06 00 00`  | 9 bytes:<br>- `35 04 00 20` -> push button<br>- `53 04 00 20` -> release button<br>- `cc 17` | ->  addr bytes<br>- `06` -> change each time (random ?) - not sure what it is for<br>- `00 00` / `02 00` -> on or off / button stay pressed|
+| 2  | `W_TX_PAYLOAD` |               | `35 04 00 20 cc 17 06 00 00`  | 9 bytes:<br>- `35 04 00 20` -> push button<br>- `53 04 00 20` -> release button<br>- `cc 17`: addr bytes<br>- `06` -> change each time (random ?) - not sure what it is for<br>- `00 00` / `02 00` -> toggle device state / button stay pressed |
 | 3  | `W_REGISTER`   | `0x00101b = 0x05` - `RF_CH`     | `0x00101001b`       | Channel configuration = 0x29                                 |
 | 4  | `W_REGISTER`   | `0x00110b = 0x06` - `RF_SETUP`  | `0x0 0 1 0 0 01 1b` | RF configuration = -12dB, no PLL_LOCK, 250kbps               |
 | 5  | `W_REGISTER`   | `0x01010b = 0x0A` - `RX_ADDR_P0`| `0xcc17cc1717`      | Address on which to receive (datapipe 0)                     |
@@ -168,36 +168,36 @@ After several data extract, I ended up with the following:
 | 13 | 4.1 ms wait    |
 | 14 | `FLUSH_RX`     |                                 |                     | Preparing for data reception                                 |
 ---
-| | | | |
-|----|----------------|-------------------------------|--------|
+|    |                |                               |        |     |
+|----|----------------|-------------------------------|--------|-----|
 | 15 | `W_REGISTER`   | `0x00000b = 0x00` - `CONFIG`    | `0x00001110b`       | Config PTX, UP, 2B CRC (send payload via REUSE_TX_PAYLOAD ?) |
 | 16 | `ce(high)` for 15us then low. |                  |                     | Effectively send TX                                          |
 | 17 | 700us wait     |                                 |                     | Spend time to let the PL to be sent ?                        |
-| 18 | `W_REGISTER`   | `0x00000b = 0x00` - `CONFIG`    | `0x00001111b`       | Config `PRX`, `POWER_UP`, 2 bytes `CRC` (put on RX mode, read status | and verify RX_DR ?) - board might use IRQ... |
+| 18 | `W_REGISTER`   | `0x00000b = 0x00` - `CONFIG`    | `0x00001111b`       | Config `PRX`, `POWER_UP`, 2 bytes `CRC` (put on RX mode, read status and verify `RX_DR` ?) - board might use IRQ... Need to clarify that... |
 | 19 | `ce(high)`     |
 | 20 | `W_REGISTER`   | `0x00111b = 0x07` - `STATUS`    | `0x01110000b`       | Clear interrupt bits (no data arrived so clearing for next loop ?) |
 | 21 | `REUSE_TX_PL`  |                                 |                     | Send repeatedly payload (resend auto for next loop)          |
 | 22 | 1ms wait       |
 | 23 | `ce(low)`      |
 | Goto 15 until something is suddenly received on RX (RX flag is `1` on MISO) |
-| 24 | `R_RX_PAYLOAD` | `0x01 0x00`                     |                     | `RX` from MISO (how can this be triggered ? IRQ ?) If I understand | well, payload is repeatedly sent (REUSE_TX_PL). When RX receive something, REUSE_TX_PL is stopped doing a FLUSH_TX (1st instruction ?) => | when sending payload 53 etc.,  the end of the loop must be different (have to stop `REUSE_TX_PAYLOAD`) |
+| 24 | `R_RX_PAYLOAD` | `0x01 0x00`                     |                     | `RX` from MISO (how can this be triggered ? IRQ ?) If I understand well, payload is repeatedly sent (REUSE_TX_PL). When RX receive something, REUSE_TX_PL is stopped doing a FLUSH_TX (1st instruction ?). |
 | 25 | `W_REGISTER`   | `0x00111b = 0x07` - `STATUS`    | `0x01110000b` |
 | 26 | 60ms wait |
 | 27 | `W_REGISTER`   | `0x00000b = 0x00` - `CONFIG`    | `0x00001100b` | power down - go to sleep                                           |
-| 28 | Repeat from beginning | Repeating with other PAYLOAD for TX and RX: TX = `53 04 00 20 cc 17 DA 00 00 RX` = `01 00`                    |
+| 28 | Repeat from beginning | | | Repeating with other PAYLOAD for TX and RX: TX = `53 04 00 20 cc 17 DA 00 00 RX`, RX = `01 00`            |
 
 
-Looking at this and even if it took me several days to understand and a lot of tests, we can see that the device is most probably using `IRQ` pin to be able to exit from the loop. My first tests were not successfull because :
+Looking at this and even if it took me several days to understand and a lot of tests, we can see that the device is most probably using `IRQ` pin to be able to exit from the loop. My first tests were not successful because :
 - it was very difficult to solder a new wire without poping another wire out to *see* `IRQ` pin...
 - when I tested the `IRQ` pin, I did not have enough experience with NRF24 to understand what I did wrong in my code
 - I had a lot of pain to understand the overall algorithm and `REUSE_TX_PAYLOAD`.
 - Few people on the web uses `REUSE_TX_PAYLOAD` nor `IRQ` pin.
 
-After digging and trying to mimic this algo with the *Maniacbug RF24* high level library, I decided to use low level stuff from it (I moved functions from private to public) to use functions such as `write_register` directly. Indeed, this library is intended to simplify your life as a developer but I needed more :)
+After digging and trying to mimic this algorithm with the *Maniacbug RF24* high level library, I decided to use low level stuff from it (I moved functions from private to public) to use functions such as `write_register` directly. Indeed, this library is intended to simplify your life as a developer but I needed more :)
 After coding everything using [low level functions](https://github.com/nmaupu/yokis-hack/blob/d163de186d59d2362a6537b19ff3236faf3e82b2/src/RF/e2bp.cpp#L281) I began to have results :D
 Now that I understand better, I tried to get back to the genuine NRF24 library without success yet...
 
-The solution was indeed to use `IRQ` pin for receiving data on RX when it is available. If you don't use `IRQ`, it's almost impossible to get the response from the device... It's too slow to switch from `TX` to `RX` for listening and the device has already sent the response on the air...
+The solution was indeed to use `IRQ` pin for receiving data on RX when it is available. If you don't use `IRQ`, it's almost impossible to get the response from the device... It's too slow to switch from `TX` to `RX` for listening and the device has already sent the response in the air...
 The response says two things:
 - you have to stop the `TX` loop
 - you get the status of the device (last byte is 0 if OFF, 1 if ON - not so sure for dimmer but for switch it seems to be the case all the time)
@@ -251,9 +251,9 @@ What I saw so far sniffing traffic:
 
 The following seems to apply:
 - devices store the previous lights' status in memory
-- all devices are being set to the same status when button is pressed
+- all paired devices are being *set* to the very same status when button is pressed (all devices are being set to ON or OFF)
 - if every devices are the same status than the one stored, toggle *all* devices
-- if some devices are `ON` and `OFF`, then reuse the previous status for *all* devices
+- if some devices are `ON` and `OFF`, then reuse the previous status (probably stored in a memory somewhere) for *all* devices
 
 This is actually very nice because that can be used to operate nicely a device within home automation !
 - `B9` and `1A` are used respectively to switch on or off a device. No need to check the returned status !

@@ -616,16 +616,15 @@ void pollForStatus(Device* d) {
             g_mqtt->notifyOnline(d);
         }
 
-        // Update device status if changing
-        if (d->getStatus() != ds) {
-            d->setStatus(ds);
-            if (d->getMode() == DIMMER) {
-                if (ds == ON && d->getBrightness() == 0)
-                    d->setBrightness(BRIGHTNESS_MAX);
-                g_mqtt->notifyBrightness(d);
-            } else {
-                g_mqtt->notifyPower(d);
-            }
+        // Update device status - even if unchanged
+        // Hence, in case of hass restart, status are updated
+        d->setStatus(ds);
+        if (d->getMode() == DIMMER) {
+            if (ds == ON && d->getBrightness() == 0)
+                d->setBrightness(BRIGHTNESS_MAX);
+            g_mqtt->notifyBrightness(d);
+        } else {
+            g_mqtt->notifyPower(d);
         }
     } else {
         if (d->pollingFailed() >= DEVICE_MAX_FAILED_POLLING_BEFORE_OFFLINE) {
