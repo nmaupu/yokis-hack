@@ -89,6 +89,8 @@ const char* Device::getStatusAsString(DeviceStatus status) {
             return "OFF";
         case UNDEFINED:
             return "UNDEFINED";
+        case PAUSE_SHUTTER:
+            return "PAUSE_SHUTTER";
     }
 
     return NULL;
@@ -101,6 +103,8 @@ const char* Device::getModeAsString(DeviceMode mode) {
             return "DIMMER";
         case ON_OFF:
             return "ON_OFF";
+        case SHUTTER:
+           return "SHUTTER";
         case NO_RCPT:
             return "NO_RCP";
     }
@@ -169,6 +173,8 @@ void Device::setMode(const char* mode) {
         this->setMode(ON_OFF);
     } else if (strcmp("DIMMER", mode) == 0) {
         this->setMode(DIMMER);
+    } else if (strcmp("SHUTTER", mode) == 0) {
+        this->setMode(SHUTTER);
     } else if (strcmp("NO_RCPT", mode) == 0) {
         this->setMode(NO_RCPT);
     } else {
@@ -219,6 +225,9 @@ void Device::toggleStatus() {
     switch (status) {
         case UNDEFINED:
             setStatus(UNDEFINED);
+            break;
+        case PAUSE_SHUTTER:
+            setStatus(PAUSE_SHUTTER);
             break;
         case OFF:
             setStatus(ON);

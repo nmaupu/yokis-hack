@@ -40,11 +40,14 @@ DeviceStatus E2bp::getLastKnownDeviceStatus() {
 bool E2bp::setDeviceStatus(DeviceStatus ds) {
     uint8_t buf[PAYLOAD_LENGTH];
 
-    // For all devices, using the on/off payloads
     reset();
     setupRFModule();
-
-    getPayload(buf, ds == ON ? PL_ON : PL_OFF);
+    // For all devices, use the on or off payload except for shutters
+    if(device->getMode() == SHUTTER && ds == PAUSE_SHUTTER) {
+        getPayload(buf, PL_SHUTTERPAUSE);
+    } else {
+        getPayload(buf, ds == ON ? PL_ON : PL_OFF);
+    }
 
     bool ret = false;
     unsigned long timeout = millis() + 1000;
@@ -67,10 +70,13 @@ bool E2bp::on() { return setDeviceStatus(ON); }
 
 bool E2bp::off() { return setDeviceStatus(OFF); }
 
+bool E2bp::pauseShutter() { return setDeviceStatus(PAUSE_SHUTTER); }
+
 // Toggle a device
-// This function emulates a normal operated e2bp. But a better ON and OFF are
-// more reliable and need less communication between devices To toggle, it's
-// actually better to get status first and invert it.
+// This function emulates a normal operated e2bp.
+// But it's better to use ON and OFF as they are more reliable and need less
+// communication between devices. To toggle, it's actually better to get
+// status first and invert it.
 bool E2bp::toggle() {
     unsigned long timeout = millis() + 1000;
     bool retPress = false, retRelease = false;
@@ -183,6 +189,10 @@ DeviceMode E2bp::getDeviceModeFromRecvData() {
             return ON_OFF;
         case 1:
             return DIMMER;
+        // YOKIS MVR500ER - 1F - 42 ou 2F - 42
+        case 0x1e:
+        case 0x2f:
+            return SHUTTER;
         default:
             return NO_RCPT;
     }
@@ -259,11 +269,13 @@ bool E2bp::pressAndHoldFor(unsigned long duration) {
 // Fill a given buffer with the correct payload and return a pointer to it
 uint8_t* E2bp::getPayload(uint8_t* buf, PayloadType type) {
     buf[0] = 0x00;
-    buf[1] = 0x04;
+    buf[1] = device->getMode() == SHUTTER ? 0x16 : 0x04;
     buf[2] = 0x00;
     buf[3] = 0x20;
     buf[4] = device->getHardwareAddress()[0];
     buf[5] = device->getHardwareAddress()[1];
+    buf[4] = 0x00;
+    buf[5] = 0x00;
     buf[6] = random(0, 0xff);
     buf[7] = 0x00;
     buf[8] = 0x00;
@@ -279,7 +291,7 @@ uint8_t* E2bp::getPayload(uint8_t* buf, PayloadType type) {
             buf[0] = YOKIS_CMD_ON;
             break;
         case PL_OFF:
-            buf[0] = YOKIS_CMD_OFF;
+            buf[0] = device->getMode() == SHUTTER ? YOKIS_CMD_OFF_SHUTTER : YOKIS_CMD_OFF;
             break;
         case PL_STATUS:
             buf[0] = 0;
@@ -288,6 +300,10 @@ uint8_t* E2bp::getPayload(uint8_t* buf, PayloadType type) {
         case PL_DIM:
             buf[0] = YOKIS_CMD_BEGIN;
             buf[7] = 0x02;
+            break;
+        case PL_SHUTTERPAUSE:
+            buf[0] = YOKIS_CMD_SHUTTER_PAUSE;
+            break;
     }
 
     return buf;
@@ -385,13 +401,22 @@ bool E2bp::runMainLoop() {
             LOG.println();
         }
 
-        if (firstPayloadStatus == UNDEFINED)
-            firstPayloadStatus = answerBuf[1] == 1 ? ON : OFF;
-        else
-            secondPayloadStatus = answerBuf[1] == 1 ? ON : OFF;
+        // MVR500 window open and delay ok  00 10 11 11 - 00 00 00 10 10 = delay ok
+        // MVR500 window close and delay ok 00 01 11 10 - 00 00 00 10 10 = delay ok
+        // MVR500 window open and pause     00 00 11 11 - 00 00 00 10
+        // MVR500 send open or close the answerbuf take ******* - 00 00 00 11 busy
+        // MVR500 after pair send status when window open 00 00 11 10 - 00 00 00 10
+
+        if (firstPayloadStatus == UNDEFINED) {
+            firstPayloadStatus =
+                (answerBuf[1] == 1 || answerBuf[0] == 0x2f) ? ON : OFF;
+        } else {
+            secondPayloadStatus =
+                (answerBuf[1] == 1 || answerBuf[0] == 0x2f) ? ON : OFF;
+        }
     }
 
-    return !loopContinue;  // false if timeout occured
+    return !loopContinue;  // false if timeout occurred
 }
 
 void E2bp::setupPayload(const uint8_t* payload) {

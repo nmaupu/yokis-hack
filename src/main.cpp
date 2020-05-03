@@ -25,8 +25,10 @@ Pairing* g_pairingRF;
 E2bp* g_bp;
 Scanner* g_scanner;
 Copy* g_copy;
-#ifdef ESP8266
+#if defined(ESP8266)
+#if defined(MQTT_ENABLED)
 MqttHass* g_mqtt;
+#endif
 TelnetSpy g_telnetAndSerial;
 // no need to store more devices than supported by MQTT
 Device* devices[MQTT_MAX_NUM_OF_YOKIS_DEVICES];
@@ -84,6 +86,7 @@ bool pairingCallback(const char*);
 bool onCallback(const char*);
 bool offCallback(const char*);
 bool toggleCallback(const char*);
+bool pauseShutterCallback(const char*);
 bool scannerCallback(const char*);
 bool copyCallback(const char*);
 bool displayDevices(const char*);
@@ -107,7 +110,9 @@ bool deleteFromConfig(const char*);
 Device* getDeviceFromParams(const char*);
 void pollDevice(Device* device);  // Interrupt func
 void pollForStatus(Device* device);
+#if defined(MQTT_ENABLED)
 void mqttCallback(char*, uint8_t*, unsigned int);
+#endif
 #endif
 
 void setup() {
@@ -129,8 +134,10 @@ void setup() {
     reloadConfig(NULL);
 
     setupWifi();
+    #if defined(MQTT_ENABLED)
     g_mqtt = new MqttHass(espClient, host, &port, mqttUser, mqttPassword);
     g_mqtt->setCallback(mqttCallback);
+    #endif
 
     // OTA
     ArduinoOTA.onStart([]() {
@@ -190,6 +197,8 @@ void setup() {
     g_serial->registerCallback(new GenericCallback(
         "off", "Switch OFF the configured device", offCallback));
     g_serial->registerCallback(new GenericCallback(
+        "pause", "Pause the configured device (MVR500 only - shutter device)", pauseShutterCallback));
+    g_serial->registerCallback(new GenericCallback(
         "press", "Press and hold an e2bp button", pressCallback));
     g_serial->registerCallback(new GenericCallback(
         "pressFor", "Press and hold for x milliseconds", pressForCallback));
@@ -218,7 +227,7 @@ void setup() {
         "save", "Save current device configuration to SPIFFS",
         storeConfigCallback));
     g_serial->registerCallback(new GenericCallback(
-        "delete", "Delete one entry fron SPIFFS configuration",
+        "delete", "Delete one entry from SPIFFS configuration",
         deleteFromConfig));
     g_serial->registerCallback(new GenericCallback(
         "clear", "Clear all config previously stored to SPIFFS", clearConfig));
@@ -245,6 +254,8 @@ void loop() {
 #if defined(ESP8266)
     LOG.handle();
     ArduinoOTA.handle();
+
+    #if defined(MQTT_ENABLED)
     g_mqtt->loop();
 
     uint8_t nbDevices = 0;
@@ -275,6 +286,9 @@ void loop() {
             }
         }
     }
+    #else
+    mqttInit = true;
+    #endif
 #endif
     g_serial->readFromSerial();
     delay(1);
@@ -345,7 +359,7 @@ bool changeDeviceState(const char* params, bool (E2bp::*func)(void)) {
     IrqManager::irqType = E2BP;
     g_bp->setDevice(d);
     bool ret = (g_bp->*func)();
-#ifdef ESP8266
+#if defined(ESP8266) && defined(MQTT_ENABLED)
     if (ret) {
         if (d->getMode() == DIMMER) {
             g_mqtt->notifyBrightness(d);
@@ -369,7 +383,12 @@ bool offCallback(const char* params) {
     return changeDeviceState(params, &E2bp::off);
 }
 
-bool scannerCallback(const char* params) {
+bool pauseShutterCallback(const char* params) {
+    return changeDeviceState(params, &E2bp::pauseShutter);
+}
+
+    bool
+    scannerCallback(const char* params) {
     if (FLAG_IS_ENABLED(FLAG_POLLING)) {
         LOG.println("Disable polling before attempting to scan ! Aborting.");
         return false;
@@ -613,7 +632,9 @@ void pollForStatus(Device* d) {
 
         if (d->isOffline()) {  // Device is back online
             d->online();
+            #if defined(MQTT_ENABLED)
             g_mqtt->notifyOnline(d);
+            #endif
         }
 
         // Update device status - even if unchanged
@@ -622,9 +643,13 @@ void pollForStatus(Device* d) {
         if (d->getMode() == DIMMER) {
             if (ds == ON && d->getBrightness() == 0)
                 d->setBrightness(BRIGHTNESS_MAX);
+            #if defined(MQTT_ENABLED)
             g_mqtt->notifyBrightness(d);
+            #endif
         } else {
+            #if defined(MQTT_ENABLED)
             g_mqtt->notifyPower(d);
+            #endif
         }
     } else {
         if (d->pollingFailed() >= DEVICE_MAX_FAILED_POLLING_BEFORE_OFFLINE) {
@@ -633,7 +658,9 @@ void pollForStatus(Device* d) {
             LOG.print(d->getName());
             LOG.println(" is offline");
             d->offline();
+            #if defined(MQTT_ENABLED)
             g_mqtt->notifyOffline(d);
+            #endif
         } else {
             LOG.print("Failed to check device ");
             LOG.print(d->getName());
@@ -645,6 +672,7 @@ void pollForStatus(Device* d) {
     }
 }
 
+#if defined(MQTT_ENABLED)
 void mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
     char* tok;
     char* mTokBuf = NULL;
@@ -702,13 +730,15 @@ void mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
     g_bp->setDevice(d);
     switch (d->getMode()) {
         case ON_OFF:
+        case SHUTTER:
         case NO_RCPT:
             if (strcmp(mPayload, "ON") == 0) {
                 g_bp->on();
             } else if (strcmp(mPayload, "OFF") == 0) {
                 g_bp->off();
+            } else if (strcmp(mPayload, "PAUSE") == 0) {
+                g_bp->pauseShutter();
             }
-
             g_mqtt->notifyPower(d);
             break;
         case DIMMER:
@@ -743,4 +773,6 @@ void mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
     delete[] mCmnd;
     delete[] mPayload;
 }
+#endif  // #if defined(MQTT_ENABLED)
+
 #endif
