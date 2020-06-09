@@ -7,12 +7,13 @@
 // Still to figure out what can configure that in scanned protocol though.
 enum DeviceMode {
     ON_OFF = 0,  // Reception: OFF=00 00, ON=00 01
-    DIMMER,  // Reception: 01 00 -> command not ok, 01 01 -> command ok (second
-             // payload) - first payload responds with device status
-    NO_RCPT  // No reception, send blindly begin and end packets 30 times
+    DIMMER,   // Reception: 01 00 -> command not ok, 01 01 -> command ok (second
+              // payload) - first payload responds with device status
+    NO_RCPT,  // No reception, send blindly begin and end packets 30 times
+    SHUTTER   // Shutter style devices (MVR500)
 };
 
-enum DeviceStatus { OFF = 0, ON, UNDEFINED };
+enum DeviceStatus { OFF = 0, ON, UNDEFINED, PAUSE_SHUTTER };
 
 enum DeviceAvailability { OFFLINE = 0, ONLINE };
 

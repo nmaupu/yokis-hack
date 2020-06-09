@@ -10,7 +10,15 @@
 #define PAYLOAD_LENGTH 9
 #define MAIN_LOOP_TIMEOUT_MILLIS 500
 
-enum PayloadType { PL_BEGIN = 0, PL_END, PL_STATUS, PL_ON, PL_OFF, PL_DIM };
+enum PayloadType {
+    PL_BEGIN = 0,
+    PL_END,
+    PL_STATUS,
+    PL_ON,
+    PL_OFF,
+    PL_DIM,
+    PL_SHUTTERPAUSE
+};
 
 // Very low level class to control a Yokis device just like a e2bp remote
 class E2bp : public RFConfigurator {
@@ -41,6 +49,7 @@ class E2bp : public RFConfigurator {
     void setupRFModule() override;
     bool on();
     bool off();
+    bool pauseShutter();
     bool toggle();
     // See Yokis MTV500ER manual for those configs
     // Note: depending on configuration, 2 pulses can set to "memory" or 100%
