@@ -12,6 +12,7 @@ Mqtt::Mqtt(WiFiClient& wifiClient, const char* host, const uint16_t* port,
     this->password = password;
     this->setServer(host, *port);
     this->setCallback(Mqtt::callback);
+    this->connectRetries = 0;
 
     // Init subscriptions to NULL
     subscribedTopicIdx = 0;
@@ -68,9 +69,19 @@ void Mqtt::reconnect() {
 }
 
 boolean Mqtt::loop() {
-    if (!this->connected()) {
-        this->reconnect();
+    if (connectRetries >= MQTT_CONNECT_MAX_RETRIES) {
+        connectRetries = 0; // ready to retry next loop
+        return false;
     }
+
+    if (!this->connected()) {
+        connectRetries++;
+        this->reconnect();
+    } else {
+        // Reset connectRetries to zero
+        connectRetries = 0;
+    }
+
     // Call parent function
     return PubSubClient::loop();
 }

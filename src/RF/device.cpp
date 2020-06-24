@@ -8,11 +8,11 @@
 #define HARDWARE_ADDRESS_LENGTH 5
 
 #ifdef ESP8266
-// Configuration filename to store on SPIFFS when using ESP8266
-#define SPIFFS_CONFIG_FILENAME "/yokis.conf"
-#define SPIFFS_CONFIG_BAK_FILENAME "/yokis.conf.bak"
-#define SPIFFS_CONFIG_SEP "|"
-#define SEP SPIFFS_CONFIG_SEP
+// Configuration filename to store on LittleFS when using ESP8266
+#define LITTLEFS_CONFIG_FILENAME "/yokis.conf"
+#define LITTLEFS_CONFIG_BAK_FILENAME "/yokis.conf.bak"
+#define LITTLEFS_CONFIG_SEP "|"
+#define SEP LITTLEFS_CONFIG_SEP
 #endif
 
 Device::Device(const char* dname) {
@@ -300,33 +300,59 @@ Device* Device::getFromList(Device** devices, size_t size,
 }
 
 #ifdef ESP8266
-bool Device::spiffsInitialized = false;
+bool Device::littleFSInitialized = false;
 
-// Static - Initialize SPIFFS memory area
-void Device::spiffsInit() {
-    if (!Device::spiffsInitialized) {
+// Static - Initialize LittleFS memory area
+void Device::littleFSInit() {
+    if (!Device::littleFSInitialized) {
         /*
-        SPIFFSConfig cfg;
+        LittleFSConfig cfg;
         cfg.setAutoFormat(false);
-        SPIFFS.setConfig(cfg);
+        LittleFS.setConfig(cfg);
         */
-        Device::spiffsInitialized = SPIFFS.begin();
+        Device::littleFSInitialized = LittleFS.begin();
     }
 }
 
-bool Device::saveToSpiffs() {
+// Static - Store a raw configuration line into LittleFS
+bool Device::storeRawConfig(const char* line) {
     bool ret = true;
 
-    Device::spiffsInit();
+    Device::littleFSInit();
+
+    File f = LittleFS.open(LITTLEFS_CONFIG_FILENAME, "a+");
+    if (!f) {
+        LOG.print(LITTLEFS_CONFIG_FILENAME);
+        LOG.println(" - file open failed");
+        return false;
+    }
+
+    char buf[128];
+    sprintf(buf, "%s", line);
+    int bytesWritten = f.println(buf);
+    if (bytesWritten <= 0) {
+        LOG.print(LITTLEFS_CONFIG_FILENAME);
+        LOG.println(" - cannot write to file");
+        ret = false;
+    }
+
+    f.close();
+    return ret;
+}
+
+bool Device::saveToLittleFS() {
+    bool ret = true;
+
+    Device::littleFSInit();
 
     // Search for this device if it is already stored
     // delete the line if found
     int line = Device::findInConfig(name);
     Device::deleteLineInConfig(line);
 
-    File f = SPIFFS.open(SPIFFS_CONFIG_FILENAME, "a+");
+    File f = LittleFS.open(LITTLEFS_CONFIG_FILENAME, "a+");
     if (!f) {
-        LOG.print(SPIFFS_CONFIG_FILENAME);
+        LOG.print(LITTLEFS_CONFIG_FILENAME);
         LOG.println(" - file open failed");
         return false;
     }
@@ -338,7 +364,7 @@ bool Device::saveToSpiffs() {
             version[2], SEP, serial[0], serial[1], SEP, mode);
     int bytesWritten = f.println(buf);
     if (bytesWritten <= 0) {
-        LOG.print(SPIFFS_CONFIG_FILENAME);
+        LOG.print(LITTLEFS_CONFIG_FILENAME);
         LOG.println(" - cannot write to file");
         ret = false;
     }
@@ -347,14 +373,14 @@ bool Device::saveToSpiffs() {
     return ret;
 }
 
-// Static - delete a device from SPIFFS configuration
+// Static - delete a device from LittleFS configuration
 void Device::deleteFromConfig(const char* deviceName) {
     int line = Device::findInConfig(deviceName);
     if (line != -1) Device::deleteLineInConfig(line);
 }
 
-// Static - load devices previously stored in the SPIFFS memory area
-void Device::loadFromSpiffs(Device** devices, const unsigned int size) {
+// Static - load devices previously stored in the LittleFS memory area
+void Device::loadFromLittleFS(Device** devices, const unsigned int size) {
     char buf[128];
     char* tok;
     uint16_t numLines = 0;
@@ -362,11 +388,11 @@ void Device::loadFromSpiffs(Device** devices, const unsigned int size) {
     char uCharBuf[3];
     uint8_t uIntBuf[3];
 
-    Device::spiffsInit();
+    Device::littleFSInit();
 
-    File f = SPIFFS.open(SPIFFS_CONFIG_FILENAME, "r");
+    File f = LittleFS.open(LITTLEFS_CONFIG_FILENAME, "r");
     if (!f) {
-        LOG.print(SPIFFS_CONFIG_FILENAME);
+        LOG.print(LITTLEFS_CONFIG_FILENAME);
         LOG.println(" - File open failed");
         return;
     }
@@ -432,11 +458,11 @@ void Device::loadFromSpiffs(Device** devices, const unsigned int size) {
     f.close();
 }
 
-// static - display config file from SPIFFS
-void Device::displayConfigFromSpiffs() {
-    Device::spiffsInit();
-    File f = SPIFFS.open(SPIFFS_CONFIG_FILENAME, "r");
-    LOG.println("SPIFFS configuration stored:");
+// static - display config file from LittleFS
+void Device::displayConfigFromLittleFS() {
+    Device::littleFSInit();
+    File f = LittleFS.open(LITTLEFS_CONFIG_FILENAME, "r");
+    LOG.println("LittleFS configuration stored:");
     while (f.available()) {
         LOG.write(f.read());
     }
@@ -444,9 +470,9 @@ void Device::displayConfigFromSpiffs() {
 }
 
 // static
-void Device::clearConfigFromSpiffs() {
-    Device::spiffsInit();
-    File f = SPIFFS.open(SPIFFS_CONFIG_FILENAME, "w");
+void Device::clearConfigFromLittleFS() {
+    Device::littleFSInit();
+    File f = LittleFS.open(LITTLEFS_CONFIG_FILENAME, "w");
     if (f) f.close();
 }
 
@@ -454,13 +480,13 @@ void Device::clearConfigFromSpiffs() {
 int Device::findInConfig(const char* deviceName) {
     if (deviceName == NULL) return -1;
 
-    Device::spiffsInit();
+    Device::littleFSInit();
     int currentLine = 1;
     char buf[128];
     char* tok;
     int found = -1;
 
-    File f = SPIFFS.open(SPIFFS_CONFIG_FILENAME, "r");
+    File f = LittleFS.open(LITTLEFS_CONFIG_FILENAME, "r");
     if (!f) {
         LOG.println("File open failed");
         return -1;
@@ -484,20 +510,20 @@ int Device::findInConfig(const char* deviceName) {
 
 // static
 void Device::deleteLineInConfig(int line) {
-    Device::spiffsInit();
+    Device::littleFSInit();
 
     char buf[128];
     int currentLine = 1;
 
-    File f = SPIFFS.open(SPIFFS_CONFIG_FILENAME, "r");
+    File f = LittleFS.open(LITTLEFS_CONFIG_FILENAME, "r");
     if (!f) {
-        LOG.print(SPIFFS_CONFIG_FILENAME);
+        LOG.print(LITTLEFS_CONFIG_FILENAME);
         LOG.println(" - File open failed");
         return;
     }
-    File fbak = SPIFFS.open(SPIFFS_CONFIG_BAK_FILENAME, "w");
+    File fbak = LittleFS.open(LITTLEFS_CONFIG_BAK_FILENAME, "w");
     if (!fbak) {
-        LOG.print(SPIFFS_CONFIG_BAK_FILENAME);
+        LOG.print(LITTLEFS_CONFIG_BAK_FILENAME);
         LOG.println(" - File open failed");
         return;
     }
@@ -515,8 +541,8 @@ void Device::deleteLineInConfig(int line) {
 
     f.close();
     fbak.close();
-    SPIFFS.remove(SPIFFS_CONFIG_FILENAME);
-    SPIFFS.rename(SPIFFS_CONFIG_BAK_FILENAME, SPIFFS_CONFIG_FILENAME);
+    LittleFS.remove(LITTLEFS_CONFIG_FILENAME);
+    LittleFS.rename(LITTLEFS_CONFIG_BAK_FILENAME, LITTLEFS_CONFIG_FILENAME);
 }
 
 #endif

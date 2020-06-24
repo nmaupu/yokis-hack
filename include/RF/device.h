@@ -2,6 +2,9 @@
 #define __DEVICE_H__
 
 #include <Arduino.h>
+#if defined(ESP8266)
+#include <LittleFS.h>
+#endif
 
 // Depending on device, behavior can be different...
 // Still to figure out what can configure that in scanned protocol though.
@@ -43,9 +46,9 @@ class Device {
     uint8_t failedPolls;
 
 #ifdef ESP8266
-    static bool spiffsInitialized;
-    // Init SPIFFS memory area
-    static void spiffsInit();
+    static bool littleFSInitialized;
+    // Init LittleFS memory area
+    static void littleFSInit();
     // Search for a given device in config
     static int findInConfig(const char*);
     // Delete a line in config
@@ -112,15 +115,17 @@ class Device {
     void copy(const Device*);
     static Device* getFromList(Device**, size_t, const char*);
 #ifdef ESP8266
-    // Save device obj to SPIFFS
-    bool saveToSpiffs();
-    // Load a bunch of devices from SPIFFS to a previously allocated array of
+    // Save device obj to LittleFS
+    bool saveToLittleFS();
+    // Store a raw device config to LittleFS (use to migrate from SPIFFS to LittleFS)
+    static bool storeRawConfig(const char*);
+    // Load a bunch of devices from LittleFS to a previously allocated array of
     // pointers which size is passed as parameter
-    static void loadFromSpiffs(Device**, const unsigned int);
-    // Display config file from SPIFFS
-    static void displayConfigFromSpiffs();
-    // Clear config from SPIFFS
-    static void clearConfigFromSpiffs();
+    static void loadFromLittleFS(Device**, const unsigned int);
+    // Display config file from LittleFS
+    static void displayConfigFromLittleFS();
+    // Clear config from LittleFS
+    static void clearConfigFromLittleFS();
     // Delete a device from config
     static void deleteFromConfig(const char*);
 #endif

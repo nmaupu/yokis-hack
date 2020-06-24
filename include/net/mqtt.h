@@ -7,6 +7,7 @@
 
 #define MQTT_TOPIC_COMMAND "cmnd"
 #define MQTT_MAX_NUM_OF_YOKIS_DEVICES 64
+#define MQTT_CONNECT_MAX_RETRIES 3
 
 class Mqtt : public PubSubClient {
    private:
@@ -14,6 +15,7 @@ class Mqtt : public PubSubClient {
     const char* password;
     const char* host;
     const uint16_t* port;
+    uint8_t connectRetries;
     char* subscribedTopics[MQTT_MAX_NUM_OF_YOKIS_DEVICES];
     uint8_t subscribedTopicIdx;
     void resubscribe();

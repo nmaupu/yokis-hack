@@ -105,6 +105,7 @@ bool dimmerSet(const char*, const uint8_t);
 bool storeConfigCallback(const char*);
 bool clearConfig(const char*);
 bool displayConfig(const char*);
+bool restoreConfig(const char*);
 bool reloadConfig(const char*);
 bool deleteFromConfig(const char*);
 Device* getDeviceFromParams(const char*);
@@ -130,7 +131,7 @@ void setup() {
     pinMode(STATUS_LED, OUTPUT);
     digitalWrite(STATUS_LED, HIGH);  // pin is inverted so, set it off
 
-    // Load all previously stored devices from SPIFFS memory
+    // Load all previously stored devices from LittleFS memory
     reloadConfig(NULL);
 
     setupWifi();
@@ -224,18 +225,21 @@ void setup() {
 
 #ifdef ESP8266
     g_serial->registerCallback(new GenericCallback(
-        "save", "Save current device configuration to SPIFFS",
+        "save", "Save current device configuration to LittleFS",
         storeConfigCallback));
     g_serial->registerCallback(new GenericCallback(
-        "delete", "Delete one entry from SPIFFS configuration",
+        "delete", "Delete one entry from LittleFS configuration",
         deleteFromConfig));
     g_serial->registerCallback(new GenericCallback(
-        "clear", "Clear all config previously stored to SPIFFS", clearConfig));
+        "clear", "Clear all config previously stored to LittleFS", clearConfig));
     g_serial->registerCallback(new GenericCallback(
-        "reload", "Reload config from SPIFFS to memory", reloadConfig));
+        "reload", "Reload config from LittleFS to memory", reloadConfig));
     g_serial->registerCallback(new GenericCallback(
-        "dSpiffs", "display config previously stored in SPIFFS",
+        "dConfigFS", "display config previously stored in LittleFS",
         displayConfig));
+    g_serial->registerCallback(new GenericCallback(
+        "dRestore", "restore a previously saved raw config line (SPIFFS->LittleFS)",
+        restoreConfig));
 #endif
 
     // Handle interrupt pin
@@ -256,7 +260,11 @@ void loop() {
     ArduinoOTA.handle();
 
     #if defined(MQTT_ENABLED)
-    g_mqtt->loop();
+    bool mqttLoop = g_mqtt->loop();
+    if (!mqttLoop) {
+        // loop is faulty, network is down ?
+        setupWifi();
+    }
 
     uint8_t nbDevices = 0;
     if (!mqttInit) {
@@ -552,7 +560,7 @@ bool storeConfigCallback(const char* params) {
         currentDevice->setMode(pch);
     }
 
-    ret = currentDevice->saveToSpiffs();
+    ret = currentDevice->saveToLittleFS();
     if (ret) LOG.println("Saved.");
 
     // reset default name
@@ -563,13 +571,30 @@ bool storeConfigCallback(const char* params) {
 }
 
 bool clearConfig(const char*) {
-    Device::clearConfigFromSpiffs();
+    Device::clearConfigFromLittleFS();
     return true;
 }
 
 bool displayConfig(const char*) {
-    Device::displayConfigFromSpiffs();
+    Device::displayConfigFromLittleFS();
     return true;
+}
+
+bool restoreConfig(const char* params) {
+    char* paramsBak;
+    char* pch;
+
+    int len = strlen(params);
+    paramsBak = new char[len + 1];
+    strncpy(paramsBak, params, len);
+    paramsBak[len] = 0;
+    strtok(paramsBak, " ");   // ignore the command
+    pch = strtok(NULL, " ");  // Get the line to restore
+
+    bool ret = Device::storeRawConfig(pch);
+
+    delete[] paramsBak;
+    return ret;
 }
 
 bool reloadConfig(const char*) {
@@ -580,7 +605,7 @@ bool reloadConfig(const char*) {
         devices[i] = NULL;
         deviceStatusPollers[i] = NULL;
     }
-    Device::loadFromSpiffs(devices, MQTT_MAX_NUM_OF_YOKIS_DEVICES);
+    Device::loadFromLittleFS(devices, MQTT_MAX_NUM_OF_YOKIS_DEVICES);
 
     // Reattach tickers to devices
     for (uint8_t i = 0; i < MQTT_MAX_NUM_OF_YOKIS_DEVICES; i++) {
