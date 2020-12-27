@@ -51,18 +51,18 @@ void Mqtt::clearSubscriptions() {
 void Mqtt::reconnect() {
     char buf[128];
     while (!this->connected()) {
-        sprintf(buf, "Connecting to MQTT %s:%hu ...", host, *port);
-        LOG.println(buf);
-
-        String clientId = "ESP8266Client-";
+        String clientId = "YokisHack-";
         clientId += String(random(0xffff), HEX);
 
-        if (this->connect("ESP8266Client", username, password)) {
+        sprintf(buf, "Connecting to MQTT %s:%hu with client ID=%s... ", host, *port, clientId.c_str());
+        LOG.print(buf);
+
+        if (this->connect(clientId.c_str(), username, password)) {
             LOG.println("connected");
             this->resubscribe(); // resubscribe to all configured topics
         } else {
             LOG.print("failed with state ");
-            LOG.print(this->state());
+            LOG.println(this->state());
             delay(5000);
         }
     }
