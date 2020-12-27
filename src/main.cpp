@@ -135,10 +135,12 @@ void setup() {
     reloadConfig(NULL);
 
     setupWifi();
-    #if defined(MQTT_ENABLED)
+#if defined(MQTT_ENABLED)
     g_mqtt = new MqttHass(espClient, host, &port, mqttUser, mqttPassword);
     g_mqtt->setCallback(mqttCallback);
-    #endif
+#elif !defined(MQTT_IP)
+    LOG.println("MQTT is not configured, cannot connect!")
+#endif
 
     // OTA
     ArduinoOTA.onStart([]() {
@@ -259,7 +261,7 @@ void loop() {
     LOG.handle();
     ArduinoOTA.handle();
 
-    #if defined(MQTT_ENABLED)
+    #if defined(MQTT_ENABLED) && defined(MQTT_IP)
     bool mqttLoop = g_mqtt->loop();
     if (!mqttLoop) {
         // loop is faulty, network is down ?
