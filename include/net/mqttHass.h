@@ -7,6 +7,7 @@
 
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
+
 #include "RF/device.h"
 #include "net/mqtt.h"
 
@@ -14,12 +15,15 @@
 
 class MqttHass : public Mqtt {
    protected:
-    char* newMessageJson(const Device*);
-    char* newPublishTopic(const Device*);
+    char* newMessageJson(const Device*, char*);
+    char* newPublishTopic(const Device*, char*);
+    bool discoveryDone = false;
 
    public:
-    MqttHass(WiFiClient&, const char*, const uint16_t*, const char*,
-             const char*);
+    MqttHass(WiFiClient&);
+    MqttHass(WiFiClient&, const char*, const uint16_t, const char*, const char*);
+    bool isDiscoveryDone();
+    void setDiscoveryDone(bool);
     bool publishDevice(const Device*);
     void subscribeDevice(const Device*);
     void notifyAvailability(const Device*, const char*);

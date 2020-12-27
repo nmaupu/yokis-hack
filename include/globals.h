@@ -2,12 +2,17 @@
 #define __GLOBALS_H__
 
 #include <Arduino.h>
+
+#ifdef ESP8266
+#include <Ticker.h>
+#endif  // ESP8266
+
 #include "RF/copy.h"
 #include "RF/e2bp.h"
 #include "RF/pairing.h"
 #include "RF/scanner.h"
 #include "serial/serialHelper.h"
-#ifdef ESP8266
+#if defined(ESP8266) && defined(MQTT_ENABLED)
 #include "net/mqttHass.h"
 #endif
 
@@ -21,18 +26,31 @@ extern "C" {
 // etc.)
 // Interrupt pin from the NRF chip
 #ifdef ESP8266
+
 #define CE_PIN D2
 #define CSN_PIN D8
 #define IRQ_PIN D1
+
+// status led to turn off
+#define STATUS_LED D4
+
 #else
+
 // Arduino
 #define CE_PIN 7
 #define CSN_PIN 8
 #define IRQ_PIN 20
-#endif
+
+#endif // ESP8266
+
+
+#define CURRENT_DEVICE_DEFAULT_NAME "tempDevice"
 
 // Define program title
-#define PROG_TITLE "-== Yokis hacks v1.0 ==-"
+#define PROG_TITLE_FORMAT "-== Yokis hacks v. %s ==-"
+#ifndef PROG_VERSION
+#define PROG_VERSION "dev"
+#endif // PROG_VERSION
 
 // Serial baudrate
 #define SERIAL_BAUDRATE 115200
@@ -59,14 +77,29 @@ extern Pairing* g_pairingRF;
 extern E2bp* g_bp;
 extern Scanner* g_scanner;
 extern Copy* g_copy;
+extern Device* g_currentDevice;
+
 #ifdef ESP8266
+extern Device* g_devices[MQTT_MAX_NUM_OF_YOKIS_DEVICES];
+extern Ticker* g_deviceStatusPollers[MQTT_MAX_NUM_OF_YOKIS_DEVICES];
+
+#ifdef MQTT_ENABLED
+// Don't update the same device during the MQTT_UPDATE_MILLIS_WINDOW
+// time window !
+// HASS sends sometimes multiple times the same MQTT message in a row...
+// Usually 2 MQTT messages sent in a row are processed very quickly
+// something like 3 to 5 ms
+#define MQTT_UPDATE_MILLIS_WINDOW 100
 extern MqttHass* g_mqtt;
+#endif // MQTT_ENABLED
+
 // Serial configuration over telnet
 extern TelnetSpy g_telnetAndSerial;
 #define LOG g_telnetAndSerial
-#else
+
+#else // ESP8266
 #define LOG Serial
-#endif
+#endif // ESP8266
 
 #define FLAG_DEBUG (1 << 0)
 #define FLAG_RAW (1 << 1)

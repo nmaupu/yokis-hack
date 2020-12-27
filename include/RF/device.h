@@ -2,8 +2,20 @@
 #define __DEVICE_H__
 
 #include <Arduino.h>
+
 #if defined(ESP8266)
 #include <LittleFS.h>
+#include "storage/yokisLittleFS.h"
+#endif
+
+#define HARDWARE_ADDRESS_LENGTH 5
+
+#ifdef ESP8266
+// Configuration filename to store on LittleFS when using ESP8266
+#define LITTLEFS_CONFIG_FILENAME "/yokis.conf"
+#define LITTLEFS_CONFIG_BAK_FILENAME "/yokis.conf.bak"
+#define LITTLEFS_CONFIG_SEP "|"
+#define SEP LITTLEFS_CONFIG_SEP
 #endif
 
 // Depending on device, behavior can be different...
@@ -46,9 +58,6 @@ class Device {
     uint8_t failedPolls;
 
 #ifdef ESP8266
-    static bool littleFSInitialized;
-    // Init LittleFS memory area
-    static void littleFSInit();
     // Search for a given device in config
     static int findInConfig(const char*);
     // Delete a line in config

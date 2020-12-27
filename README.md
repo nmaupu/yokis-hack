@@ -22,49 +22,10 @@ This firmware can be compiled and installed on the following devices:
 The following Yokis devices are supported:
 - MTV500ER(P)
 - MTR2000ER(P)
+- MTR2000MR(P)
+- MVR500ER
 
-I never tested devices made for shutters (MVR500ER) because I don't have those...
 
-## Download
-
-No download available for now, you have to build yourself...
-Coming soon though I hope.
-
-## Building
-
-- Install platform.io
-- Compile with the following command (for ESP8266):
-```
-pio run
-```
-
-Resulting `firmwares` can be uploaded to any supported device.
-
-Firware location depends on the device:
-- Arduino Mega firmware location: `.pio/build/megaatmega2560/firmware.elf`
-- ESP8266 firmware location: `.pio/build/d1_mini/firmware.bin`
-
-To configure the ESP8266 build, use the following command:
-```
-MQTT_IP="<MQTT_IP>" \
-MQTT_PORT="<MQTT_PORT>" \
-MQTT_USERNAME="<MQTT_USERNAME>" \
-MQTT_PASSWORD="<MQTT_PASSWORD>" \
-WIFI_SSID="<SSID>" \
-WIFI_PASSWORD="<WIFI_KEY>" \
-  pio run -e d1_mini
-```
-
-First upload has to be done using an usb cable. However, all subsequent upgrades can be done using OTA as such (use `d1_mini_ota` instead of `d1_mini`):
-```
-MQTT_IP="<MQTT_IP>" \
-MQTT_PORT="<MQTT_PORT>" \
-MQTT_USERNAME="<MQTT_USERNAME>" \
-MQTT_PASSWORD="<MQTT_PASSWORD>" \
-WIFI_SSID="<SSID>" \
-WIFI_PASSWORD="<WIFI_KEY>" \
-  pio run -e d1_mini_ota --upload-port=<ip_address>
-```
 
 ## Upgrading
 
@@ -88,6 +49,12 @@ example:
 ```
 dRestore lamp|6f4d|2d|00|00|490020|9f84|0000
 ```
+
+### Upgrade general guidelines
+
+- Make a backup of your configuration using the command `dConfigFS` (copy the content of the command's result somewhere safe)
+- Upgrade using OTA or with `esptools.py`
+- In case of issue with your config, restore it line by line using the command `dRestore`
 
 ## Usage
 
@@ -123,6 +90,42 @@ For example, here are the pinout of my testing MCUs:
 | MOSI | D7            | 51           |
 | MISO | D6            | 50           |
 
+### Download and installation
+
+See releases.
+
+Tools needed: https://github.com/espressif/esptool
+
+
+Upload the binary file to your ESP using `esptools.py` like so:
+```
+esptool.py -p /dev/<serial_port> write_flash -fm dio 0x00000 /path/to/yokis-hack.bin
+```
+
+
+- Once uploaded and restarted, a new wifi network appears (named `YokisHack-XXXXXX`), connect to it.
+- Open your browser to the following IP address: http://192.168.4.1
+- Configure WiFi and optionally MQTT.
+
+Once applied, you need to switch back to your WiFi. ESP gets its IP from DHCP so you have to figure out which ip it has now...
+
+Then, to continue further (pairing devices, etc.), you can `telnet` to the ESP using its IP:
+```
+telnet <ip_address>
+```
+
+
+Note: It is also possible to configure everything using serial directly (with `minicom` for example).
+The following commands can help:
+
+```
+> help
+> wifiConfig
+> wifiDiag
+> mqttConfig
+> mqttDiag
+```
+
 
 ### Firmware usage
 
@@ -132,6 +135,7 @@ If you use Arduino, a very small set of features are available. Use an ESP8266 f
 
 The following features are available:
 - Command line interface over serial (115200 bauds)
+- Web UI to configure WiFi and MQTT
 - Serial over Telnet connection
 - OTA upgrades
 - Home Assistant auto discovery (with prefix `/homeassistant` as describe on [Home Assistant documentation](https://www.home-assistant.io/docs/mqtt/discovery/))
@@ -142,36 +146,46 @@ From serial, one can use the following commands:
 **Note:** When you pair a device, its configuration is stored and can be use for various commands if you don't pass any `device_name` as parameter. If you pair a new device, it replaces the stored configuration.
 
 
-| command     | paramters       | help                                                                                                |
-|-------------|-----------------|-----------------------------------------------------------------------------------------------------|
-| `help`      |                          | Display all commands available                                                                      |
-| `debug`     |                          | Toggle debug mode                                                                                   |
-| `raw`       |                          | Toggle raw output (output from pairing command will not be formatted) - deprecated                  |
-| `config`    |                          | Display configuration flags state                                                                   |
-| `poll`      |                          | Toggle the option to poll all the configured devices for their status and publish them over MQTT    |
-| `pair`      |                          | Add a new device (emulate the pairing process) - it's like pressing a button's remote 5 times       |
-| `copy`      | `[device_name]`          | Copy a device - send the payload corresponding the device to pair                                   |
-| `scan`      | `[device_name]`          | scan for packet                                                                                     |
-| `toggle`    | `[device_name]`          | Toggle the state of a device                                                                        |
-| `on`        | `[device_name]`          | Switch on a device                                                                                  |
-| `off`       | `[device_name]`          | Switch off a device                                                                                 |
-| `press`     | `[device_name]`          | Emulate a button press (and hold) - this is mostly used for debugging                               |
-| `pressFor`  | `device_name duration`   | Emulate a button press and hold for a duration (dimmers only)                                       |
-| `release`   | `[device_name]`          | Emulate a button release - this is mostly used for debugging                                        |
-| `dimmem`    | `[device_name]`          | Only for dimmers - Set to dimmer memory (1 button press)                                            |
-| `dimmin`    | `[device_name]`          | Only for dimmers - Set the dimmer to minimum light (4 button presses)                               |
-| `dimmax`    | `[device_name]`          | Only for dimmers - Set the dimmer to 100% light (2 button presses)                                  |
-| `dimmid`    | `[device_name]`          | Only for dimmers - Set the dimmer to 50% light (3 button presses)                                   |
-| `dimnil`    | `[device_name]`          | Only for dimmers - Set the dimmer *night light* mode (7 button presses)                             |
-| `save`      |                          | Persist the current device to internal ESP memory (SPIFFS)                                          |
-| `delete`    | `[device_name]`          | Delete one entry from the internal ESP memory (SPIFFS)                                              |
-| `clear`     |                          | Clear the internal ESP memory and delete all stored devices(SPIFFS)                                 |
-| `reload`    |                          | Reload the configuration from the internal ESP memory (SPIFFS)                                      |
-| `dConfig`   |                          | Display all loaded devices information                                                              |
-| `dConfigFS` |                          | Display internal memory configuration file as is                                                    |
+| command            | paramters                | help                                                                                                |
+|--------------------|--------------------------|-----------------------------------------------------------------------------------------------------|
+| `help`             |                          | Display all commands available                                                                      |
+| `debug`            |                          | Toggle debug mode                                                                                   |
+| `raw`              |                          | Toggle raw output (output from pairing command will not be formatted) - deprecated                  |
+| `poll`             |                          | Toggle the option to poll all the configured devices for their status and publish them over MQTT    |
+| `config`           |                          | Display configuration flags state                                                                   |
+| `pair`             |                          | Add a new device (emulate the pairing process) - it's like pressing a button's remote 5 times       |
+| `toggle`           | `[device_name]`          | Toggle the state of a device                                                                        |
+| `scan`             | `[device_name]`          | scan for packet                                                                                     |
+| `copy`             | `[device_name]`          | Copy a device - send the payload corresponding the device to pair                                   |
+| `dConfig`          |                          | Display all loaded devices information                                                              |
+| `on`               | `[device_name]`          | Switch on a device                                                                                  |
+| `off`              | `[device_name]`          | Switch off a device                                                                                 |
+| `pause`            | `[device_name]`          | Pause the configured device (MVR500 only - shutter device)                                          |
+| `press`            | `[device_name]`          | Emulate a button press (and hold) - this is mostly used for debugging                               |
+| `pressFor`         | `device_name duration`   | Emulate a button press and hold for a duration (dimmers only)                                       |
+| `release`          | `[device_name]`          | Emulate a button release - this is mostly used for debugging                                        |
+| `status`           | `[device_name]`          | Get device status                                                                                   |
+| `dimmem`           | `[device_name]`          | Only for dimmers - Set to dimmer memory (1 button press)                                            |
+| `dimmin`           | `[device_name]`          | Only for dimmers - Set the dimmer to minimum light (4 button presses)                               |
+| `dimmax`           | `[device_name]`          | Only for dimmers - Set the dimmer to 100% light (2 button presses)                                  |
+| `dimmid`           | `[device_name]`          | Only for dimmers - Set the dimmer to 50% light (3 button presses)                                   |
+| `dimnil`           | `[device_name]`          | Only for dimmers - Set the dimmer *night light* mode (7 button presses)                             |
+| `save`             | `device_name`            | Persist the current device to internal ESP memory (LittleFS)                                        |
+| `delete`           | `device_name`            | Delete one entry from the internal ESP memory (LittleFS)                                            |
+| `clear`            |                          | Clear all config previously stored to LittleFS                                                      |
+| `reload`           |                          | Reload config from LittleFS to memory                                                               |
+| `dConfigFS`        |                          | display config previously stored in LittleFS                                                        |
+| `dRestore`         | `config_line`            | restore a previously saved raw config line                                                          |
+| `wifiConfig`       | `ssid password`          | Configure wifi with parameters: ssid psk (does not work for psk containing spaces)                  |
+| `wifiDiag`         |                          | Display wifi configuration debug info                                                               |
+| `wifiReset`        |                          | Reset wifi configuration and setup AP mode                                                          |
+| `restart`          |                          | Restart the ESP8266 board                                                                           |
+| `mqttConfig`       | `ip port user pass`      | Configure MQTT options (format: mqttConfig host port username password)                             |
+| `mqttDiag`         |                          | Display current MQTT configuration                                                                  |
+| `mqttConfigDelete` |                          | Delete current MQTT configuration                                                                   |
 
-You need to use the serial for initial configuring and debugging.
-After adding your devices, you don't need serial anymore.
+You need to use the serial or web ui for initial configuration.
+Commands are only available through serial.
 
 #### Examples
 
@@ -205,3 +219,39 @@ Published topics:
 Subscribed topics:
 - `<device_name>/cmnd/POWER`: `ON` or `OFF`
 - `<device_name>/cmnd/BRIGHTNESS`: `0`, `1`, `2`, `3` or `4`
+
+## Development
+
+- Install platform.io
+- Compile with the following command (for ESP8266):
+```
+pio run -e d1_mini -t upload
+```
+
+Resulting `firmwares` can be uploaded to any supported device.
+
+Firware location depends on the device:
+- Arduino Mega firmware location: `.pio/build/megaatmega2560/firmware.elf`
+- ESP8266 firmware location: `.pio/build/d1_mini/firmware.bin`
+
+To configure the ESP8266 build, use the following command:
+```
+MQTT_IP="<MQTT_IP>" \
+MQTT_PORT="<MQTT_PORT>" \
+MQTT_USERNAME="<MQTT_USERNAME>" \
+MQTT_PASSWORD="<MQTT_PASSWORD>" \
+WIFI_SSID="<SSID>" \
+WIFI_PASSWORD="<WIFI_KEY>" \
+  pio run -e d1_mini [-t upload]
+```
+
+First upload has to be done using an usb cable. However, all subsequent upgrades can be done using OTA as such (use `d1_mini_ota` instead of `d1_mini`):
+```
+MQTT_IP="<MQTT_IP>" \
+MQTT_PORT="<MQTT_PORT>" \
+MQTT_USERNAME="<MQTT_USERNAME>" \
+MQTT_PASSWORD="<MQTT_PASSWORD>" \
+WIFI_SSID="<SSID>" \
+WIFI_PASSWORD="<WIFI_KEY>" \
+  pio run -e d1_mini_ota --upload-port=<ip_address> -t upload
+```
