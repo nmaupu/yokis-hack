@@ -7,6 +7,7 @@
 
 void setupWifi();
 void setupWifiAP();
+bool resetWifiConfig();
 
 #endif  // __WIFI_H__
 #endif  // ESP8266

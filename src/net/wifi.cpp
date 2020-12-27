@@ -5,9 +5,8 @@
 #define WIFI_CONNECT_MAX_TRIES 5
 
 void setupWifi() {
-    // Clear wifi config
-    WiFi.persistent(false);
-    WiFi.disconnect();
+    // temporarily resetting wifi config to force testing AP mode
+    resetWifiConfig();
     WiFi.mode(WIFI_STA);
 
     uint8_t c = 0;
@@ -55,6 +54,12 @@ void setupWifiAP() {
     Serial.println(ssid);
     Serial.print("YokisHack IP: ");
     Serial.println(WiFi.softAPIP());
+}
+
+bool resetWifiConfig() {
+    WiFi.persistent(false);
+    WiFi.disconnect();
+    return WiFi.status() == WL_DISCONNECTED;
 }
 
 #endif

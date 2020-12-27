@@ -100,6 +100,7 @@ bool dimmerMidCallback(const char*);
 bool dimmerMinCallback(const char*);
 bool dimmerNilCallback(const char*);
 bool dimmerSet(const char*, const uint8_t);
+bool resetWifiConfig(const char*);
 
 #ifdef ESP8266
 bool storeConfigCallback(const char*);
@@ -242,6 +243,9 @@ void setup() {
     g_serial->registerCallback(new GenericCallback(
         "dRestore", "restore a previously saved raw config line (SPIFFS->LittleFS)",
         restoreConfig));
+    g_serial->registerCallback(new GenericCallback(
+        "resetWifi", "Reset wifi configuration and setup AP mode",
+        resetWifiConfig));
 #endif
 
     // Handle interrupt pin
@@ -699,8 +703,13 @@ void pollForStatus(Device* d) {
     }
 }
 
+bool resetWifiConfig(const char* params) {
+    return resetWifiConfig();
+}
+
 #if defined(MQTT_ENABLED)
-void mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
+    void
+    mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
     char* tok;
     char* mTokBuf = NULL;
     char* mTopic = NULL;
