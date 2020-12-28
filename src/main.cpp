@@ -101,6 +101,7 @@ bool dimmerMinCallback(const char*);
 bool dimmerNilCallback(const char*);
 bool dimmerSet(const char*, const uint8_t);
 bool resetWifiConfig(const char*);
+bool restart(const char*);
 
 #ifdef ESP8266
 bool storeConfigCallback(const char*);
@@ -246,6 +247,10 @@ void setup() {
     g_serial->registerCallback(new GenericCallback(
         "resetWifi", "Reset wifi configuration and setup AP mode",
         resetWifiConfig));
+    g_serial->registerCallback(new GenericCallback(
+        "restart", "Restart the ESP8266 board",
+        restart));
+
 #endif
 
     // Handle interrupt pin
@@ -705,6 +710,10 @@ void pollForStatus(Device* d) {
 
 bool resetWifiConfig(const char* params) {
     return resetWifiConfig();
+}
+
+bool restart(const char* params) {
+    ESP.restart();
 }
 
 #if defined(MQTT_ENABLED)

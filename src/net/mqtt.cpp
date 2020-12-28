@@ -12,7 +12,6 @@ Mqtt::Mqtt(WiFiClient& wifiClient, const char* host, const uint16_t* port,
     this->password = password;
     this->setServer(host, *port);
     this->setCallback(Mqtt::callback);
-    this->connectRetries = 0;
 
     // Init subscriptions to NULL
     subscribedTopicIdx = 0;
@@ -48,38 +47,35 @@ void Mqtt::clearSubscriptions() {
     subscribedTopicIdx = 0;
 }
 
-void Mqtt::reconnect() {
+bool Mqtt::reconnect() {
     char buf[128];
-    while (!this->connected()) {
-        String clientId = "YokisHack-";
-        clientId += String(random(0xffff), HEX);
+    String clientId = "YokisHack-";
+    clientId += String(random(0xffff), HEX);
 
-        sprintf(buf, "Connecting to MQTT %s:%hu with client ID=%s... ", host, *port, clientId.c_str());
-        LOG.print(buf);
+    sprintf(buf, "Connecting to MQTT %s:%hu with client ID=%s... ", host, *port,
+            clientId.c_str());
+    LOG.print(buf);
 
-        if (this->connect(clientId.c_str(), username, password)) {
-            LOG.println("connected");
-            this->resubscribe(); // resubscribe to all configured topics
-        } else {
-            LOG.print("failed with state ");
-            LOG.println(this->state());
-            delay(5000);
-        }
+    if (this->connect(clientId.c_str(), username, password)) {
+        LOG.println("connected");
+        this->resubscribe();  // resubscribe to all configured topics
+    } else {
+        LOG.print("failed with state ");
+        LOG.println(this->state());
     }
+
+    return this->connected();
 }
 
 boolean Mqtt::loop() {
-    if (connectRetries >= MQTT_CONNECT_MAX_RETRIES) {
-        connectRetries = 0; // ready to retry next loop
-        return false;
-    }
-
-    if (!this->connected()) {
-        connectRetries++;
-        this->reconnect();
-    } else {
-        // Reset connectRetries to zero
-        connectRetries = 0;
+    if(!this->connected()) {
+        for(uint8_t i=0; i<MQTT_CONNECT_MAX_RETRIES; i++) {
+            if(this->reconnect()) {
+                break;
+            } else {
+                delay(2000);
+            }
+        }
     }
 
     // Call parent function
