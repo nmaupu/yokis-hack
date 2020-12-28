@@ -115,6 +115,7 @@ Device* getDeviceFromParams(const char*);
 void pollDevice(Device* device);  // Interrupt func
 void pollForStatus(Device* device);
 bool resetWifiConfig(const char*);
+bool configureWifi(const char*);
 bool wifiDiag(const char*);
 bool restart(const char*);
 #if defined(MQTT_ENABLED)
@@ -254,11 +255,14 @@ void setup() {
         "dRestore", "restore a previously saved raw config line (SPIFFS->LittleFS)",
         restoreConfig));
     g_serial->registerCallback(new GenericCallback(
-        "resetWifi", "Reset wifi configuration and setup AP mode",
-        resetWifiConfig));
+        "wifiConfig", "Configure wifi with parameters: ssid psk (does not work for psk containing spaces)",
+        configureWifi));
     g_serial->registerCallback(new GenericCallback(
         "wifiDiag", "Display wifi configuration debug info",
         wifiDiag));
+    g_serial->registerCallback(new GenericCallback(
+        "wifiReset", "Reset wifi configuration and setup AP mode",
+        resetWifiConfig));
     g_serial->registerCallback(new GenericCallback(
         "restart", "Restart the ESP8266 board",
         restart));
@@ -723,6 +727,25 @@ void pollForStatus(Device* d) {
 bool resetWifiConfig(const char* params) {
     resetWifiConfig();
     return restart(NULL);
+}
+
+bool configureWifi(const char* params) {
+    char* paramsBak;
+    char* ssid;
+    char* psk;
+
+    int len = strlen(params);
+    paramsBak = new char[len + 1];
+    strncpy(paramsBak, params, len);
+    paramsBak[len] = 0;
+    strtok(paramsBak, " ");    // ignore the command name
+    ssid = strtok(NULL, " ");  // Get the ssid
+    psk = strtok(NULL, " ");   // Get the psk if set
+
+    setupWifi(ssid, psk);
+
+    delete[] paramsBak;
+    return true;
 }
 
 bool wifiDiag(const char* params) {
