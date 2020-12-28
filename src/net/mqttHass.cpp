@@ -2,8 +2,10 @@
 #include "net/mqttHass.h"
 #include "RF/device.h"
 
+MqttHass::MqttHass(WiFiClient& wifiClient) : Mqtt(wifiClient) {}
+
 MqttHass::MqttHass(WiFiClient& wifiClient, const char* host,
-                   const uint16_t* port, const char* username,
+                   const uint16_t port, const char* username,
                    const char* password)
     : Mqtt(wifiClient, host, port, username, password) {}
 

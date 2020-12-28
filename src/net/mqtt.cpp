@@ -3,14 +3,11 @@
 #include <Arduino.h>
 #include "globals.h"
 
-Mqtt::Mqtt(WiFiClient& wifiClient, const char* host, const uint16_t* port,
+Mqtt::Mqtt(WiFiClient& wifiClient) : PubSubClient(wifiClient), MqttConfig() {}
+
+Mqtt::Mqtt(WiFiClient& wifiClient, const char* host, const uint16_t port,
            const char* username, const char* password)
-    : PubSubClient(wifiClient) {
-    this->host = host;
-    this->port = port;
-    this->username = username;
-    this->password = password;
-    this->setServer(host, *port);
+    : PubSubClient(wifiClient), MqttConfig(host, port, username, password) {
     this->setCallback(Mqtt::callback);
 
     // Init subscriptions to NULL
@@ -18,6 +15,20 @@ Mqtt::Mqtt(WiFiClient& wifiClient, const char* host, const uint16_t* port,
     for (uint8_t i = 0; i < MQTT_MAX_NUM_OF_YOKIS_DEVICES; i++) {
         subscribedTopics[i] = NULL;
     }
+}
+
+void Mqtt::setConnectionInfo(const char* host, const uint16_t port, const char* username, const char* password) {
+    // String memory management is handled by the (operator =) func override
+    this->MqttConfig::host = host;
+    this->MqttConfig::port = port;
+    this->MqttConfig::username = username;
+    this->MqttConfig::password = password;
+
+    if(this->connected()) {
+        this->disconnect();
+    }
+    this->setServer(host, port);
+    this->reconnect();
 }
 
 boolean Mqtt::subscribe(const char* topic) {
@@ -48,15 +59,20 @@ void Mqtt::clearSubscriptions() {
 }
 
 bool Mqtt::reconnect() {
+    // No configuration available
+    if (this->MqttConfig::empty()) {
+        return false;
+    }
+
     char buf[128];
     String clientId = "YokisHack-";
     clientId += String(random(0xffff), HEX);
 
-    sprintf(buf, "Connecting to MQTT %s:%hu with client ID=%s... ", host, *port,
+    sprintf(buf, "Connecting to MQTT %s:%hu with client ID=%s... ", host.c_str(), this->MqttConfig::port,
             clientId.c_str());
     LOG.print(buf);
 
-    if (this->connect(clientId.c_str(), username, password)) {
+    if (this->connect(clientId.c_str(), username.c_str(), password.c_str())) {
         LOG.println("connected");
         this->resubscribe();  // resubscribe to all configured topics
     } else {
@@ -68,6 +84,10 @@ bool Mqtt::reconnect() {
 }
 
 boolean Mqtt::loop() {
+    if (this->MqttConfig::empty()) {
+        return false;
+    }
+
     if(!this->connected()) {
         for(uint8_t i=0; i<MQTT_CONNECT_MAX_RETRIES; i++) {
             if(this->reconnect()) {

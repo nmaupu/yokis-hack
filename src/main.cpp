@@ -8,6 +8,7 @@
 #include "printf.h"
 #include "serial/genericCallback.h"
 #include "serial/serialHelper.h"
+
 #ifdef ESP8266
 #include <ArduinoOTA.h>
 #include <ESP8266WiFi.h>
@@ -26,14 +27,14 @@ Pairing* g_pairingRF;
 E2bp* g_bp;
 Scanner* g_scanner;
 Copy* g_copy;
+
 #if defined(ESP8266)
-#if defined(MQTT_ENABLED)
 MqttHass* g_mqtt;
-#endif
 TelnetSpy g_telnetAndSerial;
 // no need to store more devices than supported by MQTT
 Device* devices[MQTT_MAX_NUM_OF_YOKIS_DEVICES];
 #endif
+
 IrqType IrqManager::irqType = PAIRING;
 Device* currentDevice;
 
@@ -56,31 +57,10 @@ Ticker* deviceStatusPollers[MQTT_MAX_NUM_OF_YOKIS_DEVICES];
 #define MQTT_UPDATE_MILLIS_WINDOW 100
 
 WiFiClient espClient;
-#ifdef MQTT_IP
-const char host[] = MQTT_IP;
-#else
-const char host[] = "192.168.0.1";
-#endif
 
-#ifdef MQTT_PORT
-uint16_t port = (uint16_t)atoi(MQTT_PORT);
-#else
-uint16_t port = 1883;
-#endif
-
-#ifdef MQTT_USERNAME
-char mqttUser[] = MQTT_USERNAME;
-#else
-char mqttUser[] = "mqtt";
-#endif
-
-#ifdef MQTT_PASSWORD
-char mqttPassword[] = MQTT_PASSWORD;
-#else
-char mqttPassword[] = "password";
-#endif
-
+#ifdef MQTT_ENABLED
 bool mqttInit = false;
+#endif
 
 #endif  // ESP8266
 
@@ -118,10 +98,12 @@ bool resetWifiConfig(const char*);
 bool configureWifi(const char*);
 bool wifiDiag(const char*);
 bool restart(const char*);
+
 #if defined(MQTT_ENABLED)
 void mqttCallback(char*, uint8_t*, unsigned int);
 #endif
-#endif
+
+#endif // ESP8266
 
 void setup() {
     randomSeed(micros());
@@ -148,10 +130,8 @@ void setup() {
     webserver.begin();
 
 #if defined(MQTT_ENABLED)
-    g_mqtt = new MqttHass(espClient, host, &port, mqttUser, mqttPassword);
+    g_mqtt = new MqttHass(espClient);
     g_mqtt->setCallback(mqttCallback);
-#elif !defined(MQTT_IP)
-    LOG.println("MQTT is not configured, cannot connect!")
 #endif
 
     // OTA
@@ -286,31 +266,34 @@ void loop() {
     LOG.handle();
     ArduinoOTA.handle();
 
-    #if defined(MQTT_ENABLED) && defined(MQTT_IP)
+    #if defined(MQTT_ENABLED)
     bool mqttLoop = g_mqtt->loop();
-    if (!mqttLoop) {
+    if (!mqttLoop && mqttInit) {
         // loop is faulty, network is down ?
         setupWifi();
     }
 
     uint8_t nbDevices = 0;
     if (!mqttInit) {
-        LOG.print("Publishing homeassistant discovery data... ");
-        for (uint8_t i = 0; i < MQTT_MAX_NUM_OF_YOKIS_DEVICES; i++) {
-            if (devices[i] != NULL) {
-                nbDevices++;
-                if (g_mqtt->publishDevice(devices[i])) {
-                    g_mqtt->subscribeDevice(devices[i]);
-                    mqttInit = true;
-                } else {
-                    LOG.println("KO");
-                    break;
+        // Only process mqtt if configured
+        if(g_mqtt->connected()) {
+            LOG.print("Publishing homeassistant discovery data... ");
+            for (uint8_t i = 0; i < MQTT_MAX_NUM_OF_YOKIS_DEVICES; i++) {
+                if (devices[i] != NULL) {
+                    nbDevices++;
+                    if (g_mqtt->publishDevice(devices[i])) {
+                        g_mqtt->subscribeDevice(devices[i]);
+                        mqttInit = true;
+                    } else {
+                        LOG.println("KO");
+                        break;
+                    }
                 }
             }
-        }
 
-        if (nbDevices == 0) mqttInit = true;
-        if (mqttInit) LOG.println("OK");
+            if (nbDevices == 0) mqttInit = true;
+            if (mqttInit) LOG.println("OK");
+        }
     } else {
         // Verify polling statuses and update via MQTT if needed
         for (uint8_t i = 0;
@@ -321,9 +304,7 @@ void loop() {
             }
         }
     }
-    #else
-    mqttInit = true;
-    #endif
+    #endif // MQTT_ENABLED
 #endif
     g_serial->readFromSerial();
     delay(1);
@@ -766,8 +747,7 @@ bool restart(const char* params) {
 }
 
 #if defined(MQTT_ENABLED)
-    void
-    mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
+void mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
     char* tok;
     char* mTokBuf = NULL;
     char* mTopic = NULL;
