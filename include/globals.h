@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 // Define program title
-#define PROG_TITLE "-== Yokis hacks v1.0 ==-"
+#define PROG_TITLE "-== Yokis hacks v1.1 ==-"
 
 // Serial baudrate
 #define SERIAL_BAUDRATE 115200

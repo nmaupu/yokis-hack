@@ -2,10 +2,10 @@
 #ifndef __WIFI_H__
 #define __WIFI_H__
 
-#include <EEPROM.h>
 #include <ESP8266WiFi.h>
 
 void setupWifi();
+void setupWifi(const String ssid, const String password);
 void setupWifiAP();
 bool resetWifiConfig();
 

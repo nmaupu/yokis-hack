@@ -2,7 +2,21 @@
 #include "net/wifi.h"
 #include "globals.h"
 
-#define WIFI_CONNECT_MAX_TRIES 5
+void setupWifi(String ssid, String password) {
+    // Configuration changed
+    if (strcmp(WiFi.SSID().c_str(), ssid.c_str()) != 0 ||
+        strcmp(WiFi.psk().c_str(), password.c_str()) != 0) {
+
+        WiFi.mode(WIFI_STA);
+        WiFi.setAutoReconnect(true);
+        ETS_UART_INTR_DISABLE();
+        wifi_station_disconnect();
+        ETS_UART_INTR_ENABLE();
+
+        WiFi.begin(ssid.c_str(), password.c_str(), 0, NULL, true);
+        //ESP.restart();
+    }
+}
 
 void setupWifi() {
     WiFi.mode(WIFI_STA);
@@ -10,7 +24,7 @@ void setupWifi() {
     uint8_t c = 0;
 
     LOG.print("Connecting to WiFi ");
-    while (c < 5) {
+    while (c < 10) {
         LOG.print(".");
         c++;
         if (WiFi.status() == WL_CONNECTED) {  // ok
@@ -24,7 +38,7 @@ void setupWifi() {
     if (strlen(WiFi.SSID().c_str()) > 0) {
         // SSID is set but wrong password or wifi down
         // Not using AP mode, retrying instead
-        LOG.println("WiFi SSID is already set, retrying.");
+        LOG.println("Failed. WiFi SSID is already set, retrying.");
         return;
     }
 

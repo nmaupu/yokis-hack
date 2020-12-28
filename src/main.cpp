@@ -16,6 +16,7 @@
 #include <WiFiUdp.h>
 #include "net/mqttHass.h"
 #include "net/wifi.h"
+#include "net/webserver.h"
 #endif
 
 // globals' initialization
@@ -42,6 +43,8 @@ Device* currentDevice;
 #ifdef ESP8266
 // status led to turn off
 #define STATUS_LED D4
+
+WebServer webserver(80);
 
 Ticker* deviceStatusPollers[MQTT_MAX_NUM_OF_YOKIS_DEVICES];
 
@@ -100,8 +103,6 @@ bool dimmerMidCallback(const char*);
 bool dimmerMinCallback(const char*);
 bool dimmerNilCallback(const char*);
 bool dimmerSet(const char*, const uint8_t);
-bool resetWifiConfig(const char*);
-bool restart(const char*);
 
 #ifdef ESP8266
 bool storeConfigCallback(const char*);
@@ -113,6 +114,9 @@ bool deleteFromConfig(const char*);
 Device* getDeviceFromParams(const char*);
 void pollDevice(Device* device);  // Interrupt func
 void pollForStatus(Device* device);
+bool resetWifiConfig(const char*);
+bool wifiDiag(const char*);
+bool restart(const char*);
 #if defined(MQTT_ENABLED)
 void mqttCallback(char*, uint8_t*, unsigned int);
 #endif
@@ -136,7 +140,12 @@ void setup() {
     // Load all previously stored devices from LittleFS memory
     reloadConfig(NULL);
 
+    // Setting up configured wifi or AP mode
     setupWifi();
+
+    // Starting webserver
+    webserver.begin();
+
 #if defined(MQTT_ENABLED)
     g_mqtt = new MqttHass(espClient, host, &port, mqttUser, mqttPassword);
     g_mqtt->setCallback(mqttCallback);
@@ -247,6 +256,9 @@ void setup() {
     g_serial->registerCallback(new GenericCallback(
         "resetWifi", "Reset wifi configuration and setup AP mode",
         resetWifiConfig));
+    g_serial->registerCallback(new GenericCallback(
+        "wifiDiag", "Display wifi configuration debug info",
+        wifiDiag));
     g_serial->registerCallback(new GenericCallback(
         "restart", "Restart the ESP8266 board",
         restart));
@@ -709,11 +721,25 @@ void pollForStatus(Device* d) {
 }
 
 bool resetWifiConfig(const char* params) {
-    return resetWifiConfig();
+    resetWifiConfig();
+    return restart(NULL);
+}
+
+bool wifiDiag(const char* params) {
+    WiFi.printDiag(LOG);
+    LOG.print("Yokis-Hack IP: ");
+    if (WiFi.getMode() == WIFI_AP) {
+        LOG.println(WiFi.softAPIP());
+    } else {
+        LOG.println(WiFi.localIP());
+    }
+
+    return true;
 }
 
 bool restart(const char* params) {
     ESP.restart();
+    return true;
 }
 
 #if defined(MQTT_ENABLED)
