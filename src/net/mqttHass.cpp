@@ -1,5 +1,6 @@
 #ifdef ESP8266
 #include "net/mqttHass.h"
+#include "net/mqttConfig.h"
 #include "RF/device.h"
 
 MqttHass::MqttHass(WiFiClient& wifiClient) : Mqtt(wifiClient) {}
@@ -7,7 +8,9 @@ MqttHass::MqttHass(WiFiClient& wifiClient) : Mqtt(wifiClient) {}
 MqttHass::MqttHass(WiFiClient& wifiClient, const char* host,
                    const uint16_t port, const char* username,
                    const char* password)
-    : Mqtt(wifiClient, host, port, username, password) {}
+    : Mqtt(wifiClient) {
+        this->setConnectionInfo(host, port, username, password);
+    }
 
 // Get JSON message to publish for HASS discovery
 char* MqttHass::newMessageJson(const Device* device) {

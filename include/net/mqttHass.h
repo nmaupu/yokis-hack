@@ -19,8 +19,7 @@ class MqttHass : public Mqtt {
 
    public:
     MqttHass(WiFiClient&);
-    MqttHass(WiFiClient&, const char*, const uint16_t, const char*,
-             const char*);
+    MqttHass(WiFiClient&, const char*, const uint16_t, const char*, const char*);
     bool publishDevice(const Device*);
     void subscribeDevice(const Device*);
     void notifyAvailability(const Device*, const char*);

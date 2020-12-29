@@ -1,18 +1,10 @@
 #include "RF/device.h"
-#ifdef ESP8266
-#include <FS.h>
-#endif
+
 #include "globals.h"
 #include "utils.h"
 
-#define HARDWARE_ADDRESS_LENGTH 5
-
-#ifdef ESP8266
-// Configuration filename to store on LittleFS when using ESP8266
-#define LITTLEFS_CONFIG_FILENAME "/yokis.conf"
-#define LITTLEFS_CONFIG_BAK_FILENAME "/yokis.conf.bak"
-#define LITTLEFS_CONFIG_SEP "|"
-#define SEP LITTLEFS_CONFIG_SEP
+#if defined(ESP8266)
+#include <FS.h>
 #endif
 
 Device::Device(const char* dname) {
@@ -300,25 +292,12 @@ Device* Device::getFromList(Device** devices, size_t size,
 }
 
 #ifdef ESP8266
-bool Device::littleFSInitialized = false;
-
-// Static - Initialize LittleFS memory area
-void Device::littleFSInit() {
-    if (!Device::littleFSInitialized) {
-        /*
-        LittleFSConfig cfg;
-        cfg.setAutoFormat(false);
-        LittleFS.setConfig(cfg);
-        */
-        Device::littleFSInitialized = LittleFS.begin();
-    }
-}
 
 // Static - Store a raw configuration line into LittleFS
 bool Device::storeRawConfig(const char* line) {
     bool ret = true;
 
-    Device::littleFSInit();
+    YokisLittleFS::init();
 
     File f = LittleFS.open(LITTLEFS_CONFIG_FILENAME, "a+");
     if (!f) {
@@ -343,7 +322,7 @@ bool Device::storeRawConfig(const char* line) {
 bool Device::saveToLittleFS() {
     bool ret = true;
 
-    Device::littleFSInit();
+    YokisLittleFS::init();
 
     // Search for this device if it is already stored
     // delete the line if found
@@ -388,7 +367,7 @@ void Device::loadFromLittleFS(Device** devices, const unsigned int size) {
     char uCharBuf[3];
     uint8_t uIntBuf[3];
 
-    Device::littleFSInit();
+    YokisLittleFS::init();
 
     File f = LittleFS.open(LITTLEFS_CONFIG_FILENAME, "r");
     if (!f) {
@@ -460,7 +439,7 @@ void Device::loadFromLittleFS(Device** devices, const unsigned int size) {
 
 // static - display config file from LittleFS
 void Device::displayConfigFromLittleFS() {
-    Device::littleFSInit();
+    YokisLittleFS::init();
     File f = LittleFS.open(LITTLEFS_CONFIG_FILENAME, "r");
     LOG.println("LittleFS configuration stored:");
     while (f.available()) {
@@ -471,7 +450,7 @@ void Device::displayConfigFromLittleFS() {
 
 // static
 void Device::clearConfigFromLittleFS() {
-    Device::littleFSInit();
+    YokisLittleFS::init();
     File f = LittleFS.open(LITTLEFS_CONFIG_FILENAME, "w");
     if (f) f.close();
 }
@@ -480,7 +459,7 @@ void Device::clearConfigFromLittleFS() {
 int Device::findInConfig(const char* deviceName) {
     if (deviceName == NULL) return -1;
 
-    Device::littleFSInit();
+    YokisLittleFS::init();
     int currentLine = 1;
     char buf[128];
     char* tok;
@@ -510,7 +489,7 @@ int Device::findInConfig(const char* deviceName) {
 
 // static
 void Device::deleteLineInConfig(int line) {
-    Device::littleFSInit();
+    YokisLittleFS::init();
 
     char buf[128];
     int currentLine = 1;

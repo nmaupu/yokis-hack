@@ -5,9 +5,8 @@
 
 Mqtt::Mqtt(WiFiClient& wifiClient) : PubSubClient(wifiClient), MqttConfig() {}
 
-Mqtt::Mqtt(WiFiClient& wifiClient, const char* host, const uint16_t port,
-           const char* username, const char* password)
-    : PubSubClient(wifiClient), MqttConfig(host, port, username, password) {
+Mqtt::Mqtt(WiFiClient& wifiClient, MqttConfig& mqttConfig)
+    : PubSubClient(wifiClient), MqttConfig(mqttConfig) {
     this->setCallback(Mqtt::callback);
 
     // Init subscriptions to NULL
@@ -17,17 +16,23 @@ Mqtt::Mqtt(WiFiClient& wifiClient, const char* host, const uint16_t port,
     }
 }
 
-void Mqtt::setConnectionInfo(const char* host, const uint16_t port, const char* username, const char* password) {
-    // String memory management is handled by the (operator =) func override
-    this->MqttConfig::host = host;
-    this->MqttConfig::port = port;
-    this->MqttConfig::username = username;
-    this->MqttConfig::password = password;
+void Mqtt::setConnectionInfo(MqttConfig& config) {
+    setConnectionInfo(config.getHost().c_str(),
+                      config.getPort(),
+                      config.getUsername().c_str(),
+                      config.getPassword().c_str());
+}
 
-    if(this->connected()) {
+void Mqtt::setConnectionInfo(const char* host, uint16_t port, const char* username, const char* password) {
+    this->setHost(host);
+    this->setPort(port);
+    this->setUsername(username);
+    this->setPassword(password);
+
+    if (this->connected()) {
         this->disconnect();
     }
-    this->setServer(host, port);
+    this->setServer(getHost().c_str(), getPort());
     this->reconnect();
 }
 
@@ -60,9 +65,21 @@ void Mqtt::clearSubscriptions() {
 
 bool Mqtt::reconnect() {
     // No configuration available
-    if (this->MqttConfig::empty()) {
+    if (this->MqttConfig::isEmpty()) {
         return false;
     }
+
+    // Retry once in a while to avoid blocking serial console
+    // Handling too big unsigned long
+    if(lastConnectionRetry > ULONG_MAX - MQTT_CONNECT_RETRY_EVERY_MS) {
+        lastConnectionRetry = 0;
+    }
+    if (lastConnectionRetry!=0 && lastConnectionRetry + MQTT_CONNECT_RETRY_EVERY_MS >= millis()) { // millis resets every 72 minutes
+        // Too soon
+        return false;
+    }
+
+    lastConnectionRetry = millis();
 
     char buf[128];
     String clientId = "YokisHack-";
@@ -84,17 +101,13 @@ bool Mqtt::reconnect() {
 }
 
 boolean Mqtt::loop() {
-    if (this->MqttConfig::empty()) {
+    if (this->MqttConfig::isEmpty()) {
         return false;
     }
 
     if(!this->connected()) {
-        for(uint8_t i=0; i<MQTT_CONNECT_MAX_RETRIES; i++) {
-            if(this->reconnect()) {
-                break;
-            } else {
-                delay(2000);
-            }
+        if(!this->reconnect()) {
+
         }
     }
 

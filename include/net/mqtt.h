@@ -8,10 +8,11 @@
 
 #define MQTT_TOPIC_COMMAND "cmnd"
 #define MQTT_MAX_NUM_OF_YOKIS_DEVICES 64
-#define MQTT_CONNECT_MAX_RETRIES 3
+#define MQTT_CONNECT_RETRY_EVERY_MS 30000
 
 class Mqtt : public PubSubClient, MqttConfig {
    private:
+    ulong lastConnectionRetry = 0UL;
     char* subscribedTopics[MQTT_MAX_NUM_OF_YOKIS_DEVICES];
     uint8_t subscribedTopicIdx;
     void resubscribe();
@@ -19,10 +20,10 @@ class Mqtt : public PubSubClient, MqttConfig {
 
    public:
     Mqtt(WiFiClient&);
-    Mqtt(WiFiClient&, const char*, const uint16_t, const char*, const char*);
+    Mqtt(WiFiClient&, MqttConfig&);
     ~Mqtt();
-    void setConnectionInfo(const char* host, const uint16_t port,
-                           const char* username, const char* password);
+    void setConnectionInfo(MqttConfig&);
+    void setConnectionInfo(const char*, uint16_t, const char*, const char*);
     boolean subscribe(const char*);
     void clearSubscriptions();
     bool reconnect();

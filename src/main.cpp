@@ -100,6 +100,7 @@ bool wifiDiag(const char*);
 bool restart(const char*);
 
 #if defined(MQTT_ENABLED)
+bool mqttConfig(const char*);
 void mqttCallback(char*, uint8_t*, unsigned int);
 #endif
 
@@ -258,6 +259,12 @@ void setup() {
     g_serial->registerCallback(new GenericCallback(
         "restart", "Restart the ESP8266 board",
         restart));
+
+    #ifdef MQTT_ENABLED
+    g_serial->registerCallback(new GenericCallback(
+        "mqttConfig", "Configure MQTT options (format: mqttConfig host port username password)",
+        mqttConfig));
+#endif
 
 #endif
 
@@ -759,6 +766,42 @@ bool restart(const char* params) {
 }
 
 #if defined(MQTT_ENABLED)
+bool mqttConfig(const char* params) {
+    char *paramsBak;
+    char *host, *port, *username, *password;
+    MqttConfig config;
+
+    int len = strlen(params);
+    paramsBak = new char[len + 1];
+    strncpy(paramsBak, params, len);
+    paramsBak[len] = 0;
+    strtok(paramsBak, " ");       // Ignore the command name
+    host = strtok(NULL, " ");     // Get the host
+    if(host == NULL) {
+        LOG.println("MQTT host cannot be null. Aborting.");
+        return false;
+    }
+    port = strtok(NULL, " ");     // Get the port
+    if(port == NULL || strlen(port) > 5) {
+        LOG.println("MQTT port is null or too high. Aborting.");
+        return false;
+    }
+    username = strtok(NULL, " "); // Get the username
+    password = strtok(NULL, " "); // Get the password
+
+    config.setHost(host);
+    config.setPort(atoi(port));
+    config.setUsername(username);
+    config.setPassword(password);
+
+    //LOG.println("MQTT configuration:");
+    //config.printDebug(LOG);
+    g_mqtt->setConnectionInfo(config);
+
+    delete[] paramsBak;
+    return true;
+}
+
 void mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
     char* tok;
     char* mTokBuf = NULL;
