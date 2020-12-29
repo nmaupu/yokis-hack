@@ -12,7 +12,7 @@
 #define MQTT_CONFIG_FILE_NAME   "/mqtt.conf"
 
 class MqttConfig {
-    protected:
+    private:
      String host;
      uint16_t port;
      String username;
@@ -21,7 +21,7 @@ class MqttConfig {
     public:
      MqttConfig();
      MqttConfig(const MqttConfig& config);
-     MqttConfig(const char*, const uint16_t, const char*, const char*);
+     MqttConfig(const char*, uint16_t, const char*, const char*);
      void setHost(String);
      void setPort(uint16_t);
      void setUsername(String);
@@ -30,14 +30,13 @@ class MqttConfig {
      uint16_t getPort();
      String getUsername();
      String getPassword();
-     static MqttConfig loadConfig();
-     bool saveConfig();
      bool isEmpty();
      void printDebug(Print&);
 
      // Configuration persistence
      bool saveToLittleFS();
      static MqttConfig loadFromLittleFS();
+     static bool deleteConfigFromLittleFS();
 
 };
 

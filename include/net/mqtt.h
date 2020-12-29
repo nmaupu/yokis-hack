@@ -10,7 +10,7 @@
 #define MQTT_MAX_NUM_OF_YOKIS_DEVICES 64
 #define MQTT_CONNECT_RETRY_EVERY_MS 30000
 
-class Mqtt : public PubSubClient, MqttConfig {
+class Mqtt : public PubSubClient, public MqttConfig {
    private:
     ulong lastConnectionRetry = 0UL;
     char* subscribedTopics[MQTT_MAX_NUM_OF_YOKIS_DEVICES];

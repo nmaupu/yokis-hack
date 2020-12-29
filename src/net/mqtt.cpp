@@ -28,6 +28,7 @@ void Mqtt::setConnectionInfo(const char* host, uint16_t port, const char* userna
     this->setPort(port);
     this->setUsername(username);
     this->setPassword(password);
+    this->MqttConfig::saveToLittleFS();
 
     if (this->connected()) {
         this->disconnect();
@@ -85,11 +86,10 @@ bool Mqtt::reconnect() {
     String clientId = "YokisHack-";
     clientId += String(random(0xffff), HEX);
 
-    sprintf(buf, "Connecting to MQTT %s:%hu with client ID=%s... ", host.c_str(), this->MqttConfig::port,
-            clientId.c_str());
+    sprintf(buf, "Connecting to MQTT %s:%hu with client ID=%s... ", getHost().c_str(), getPort(), clientId.c_str());
     LOG.print(buf);
 
-    if (this->connect(clientId.c_str(), username.c_str(), password.c_str())) {
+    if (this->connect(clientId.c_str(), getUsername().c_str(), getPassword().c_str())) {
         LOG.println("connected");
         this->resubscribe();  // resubscribe to all configured topics
     } else {
@@ -106,9 +106,7 @@ boolean Mqtt::loop() {
     }
 
     if(!this->connected()) {
-        if(!this->reconnect()) {
-
-        }
+        this->reconnect();
     }
 
     // Call parent function

@@ -101,6 +101,8 @@ bool restart(const char*);
 
 #if defined(MQTT_ENABLED)
 bool mqttConfig(const char*);
+bool mqttDiag(const char*);
+bool mqttConfigDelete(const char*);
 void mqttCallback(char*, uint8_t*, unsigned int);
 #endif
 
@@ -261,10 +263,16 @@ void setup() {
         restart));
 
     #ifdef MQTT_ENABLED
-    g_serial->registerCallback(new GenericCallback(
-        "mqttConfig", "Configure MQTT options (format: mqttConfig host port username password)",
+    g_serial->registerCallback(new GenericCallback("mqttConfig",
+        "Configure MQTT options (format: mqttConfig host port username password)",
         mqttConfig));
-#endif
+    g_serial->registerCallback(new GenericCallback(
+        "mqttDiag", "Display current MQTT configuration",
+        mqttDiag));
+    g_serial->registerCallback(new GenericCallback(
+        "mqttConfigDelete", "Delete current MQTT configuration",
+        mqttConfigDelete));
+    #endif
 
 #endif
 
@@ -768,10 +776,10 @@ bool restart(const char* params) {
 #if defined(MQTT_ENABLED)
 bool mqttConfig(const char* params) {
     char *paramsBak;
-    char *host, *port, *username, *password;
+    char *host, *sport, *username, *password;
     MqttConfig config;
 
-    int len = strlen(params);
+        int len = strlen(params);
     paramsBak = new char[len + 1];
     strncpy(paramsBak, params, len);
     paramsBak[len] = 0;
@@ -781,24 +789,41 @@ bool mqttConfig(const char* params) {
         LOG.println("MQTT host cannot be null. Aborting.");
         return false;
     }
-    port = strtok(NULL, " ");     // Get the port
-    if(port == NULL || strlen(port) > 5) {
+    config.setHost(host);
+
+    sport = strtok(NULL, " ");     // Get the port
+    if(sport == NULL || strlen(sport) > 5) {
         LOG.println("MQTT port is null or too high. Aborting.");
         return false;
     }
-    username = strtok(NULL, " "); // Get the username
-    password = strtok(NULL, " "); // Get the password
+    config.setPort(atoi(sport));
 
-    config.setHost(host);
-    config.setPort(atoi(port));
+    username = strtok(NULL, " "); // Get the username
     config.setUsername(username);
+
+    password = strtok(NULL, " "); // Get the password
     config.setPassword(password);
 
-    //LOG.println("MQTT configuration:");
-    //config.printDebug(LOG);
+    LOG.println("MQTT configuration:");
+    config.printDebug(LOG);
+
     g_mqtt->setConnectionInfo(config);
 
     delete[] paramsBak;
+    return true;
+}
+
+bool mqttDiag(const char* params) {
+    LOG.println("Current MQTT configuration:");
+    g_mqtt->printDebug(LOG);
+    return true;
+}
+
+bool mqttConfigDelete(const char*) {
+    MqttConfig emptyConfig;
+    MqttConfig::deleteConfigFromLittleFS();
+    g_mqtt->setConnectionInfo(emptyConfig);
+    LOG.println("MQTT config deleted!");
     return true;
 }
 

@@ -14,7 +14,7 @@ MqttConfig::MqttConfig(const MqttConfig& config) {
 }
 
 MqttConfig::MqttConfig(const char* host, uint16_t port, const char* username, const char* password) {
-    // String memory management is handled by the (operator =) func override
+    // String memory management is handled by the = operator override
     setHost(host);
     setPort(port);
     setUsername(username);
@@ -37,26 +37,18 @@ String MqttConfig::getUsername() { return username; }
 
 String MqttConfig::getPassword() { return password; }
 
-// static
-MqttConfig MqttConfig::loadConfig() {
-    MqttConfig ret;
-    return ret;
-}
-
-bool MqttConfig::saveConfig() {
-    return true;
-}
-
 bool MqttConfig::isEmpty() {
     return host.isEmpty();
 }
 
 void MqttConfig::printDebug(Print& p) {
     p.println("Host: " + getHost());
+
     char buf[6];
     sprintf(buf, "%d", getPort());
     p.print("Port: ");
     p.println(buf);
+
     p.println("Username: " + getUsername());
     p.println("Password: " + getPassword());
 }
@@ -77,8 +69,8 @@ bool MqttConfig::saveToLittleFS() {
     sprintf(port_str, "%d", this->port);
     char* buf = (char*)malloc(
         sizeof(char) * (this->host.length() + strlen(port_str) +
-                        this->username.length() + this->password.length() + 4));
-    sprintf(buf, "%s|%s|%s|%s", this->host.c_str(), port_str,
+                        this->username.length() + this->password.length() + 5));
+    sprintf(buf, "%s|%s|%s|%s|", this->host.c_str(), port_str,
             this->username.c_str(), this->password.c_str());
 
     int bytesWritten = f.println(buf);
@@ -96,8 +88,6 @@ bool MqttConfig::saveToLittleFS() {
 // static
 MqttConfig MqttConfig::loadFromLittleFS() {
     MqttConfig config;
-    char buf[256];
-    char* tok;
 
     YokisLittleFS::init();
     File f = LittleFS.open(MQTT_CONFIG_FILE_NAME, "r");
@@ -108,22 +98,31 @@ MqttConfig MqttConfig::loadFromLittleFS() {
     }
 
     if (f.available()) {
-        f.readBytesUntil('\n', buf, sizeof(buf) - 1);
-
-        tok = strtok(buf, "|");
-        config.host = tok;
-
-        tok = strtok(NULL, "|");
-        config.port = atoi(tok);
-
-        tok = strtok(NULL, "|");
-        config.username = tok;
-
-        tok = strtok(NULL, "|");
-        config.password = tok;
+        config.setHost(f.readStringUntil('|'));
+        config.setPort(atoi(f.readStringUntil('|').c_str()));
+        config.setUsername(f.readStringUntil('|'));
+        config.setPassword(f.readStringUntil('|'));
     }
+
+    /*
+    LOG.println("Config file debug");
+    LOG.println("##########");
+    f.seek(0);
+    while(f.available()) {
+        int c = f.read();
+        LOG.print(c, HEX);
+    }
+    LOG.println();
+    LOG.println("##########");
+    */
 
     f.close();
     return config;
+}
+
+// static
+bool MqttConfig::deleteConfigFromLittleFS() {
+    YokisLittleFS::init();
+    return LittleFS.remove(MQTT_CONFIG_FILE_NAME);
 }
 #endif // ESP8266

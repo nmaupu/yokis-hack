@@ -1,9 +1,14 @@
 #ifdef ESP8266
 #include "net/mqttHass.h"
-#include "net/mqttConfig.h"
 #include "RF/device.h"
+#include "globals.h"
 
-MqttHass::MqttHass(WiFiClient& wifiClient) : Mqtt(wifiClient) {}
+MqttHass::MqttHass(WiFiClient& wifiClient) : Mqtt(wifiClient) {
+    MqttConfig config = MqttConfig::loadFromLittleFS();
+    if(!config.isEmpty()) {
+        this->setConnectionInfo(config);
+    }
+}
 
 MqttHass::MqttHass(WiFiClient& wifiClient, const char* host,
                    const uint16_t port, const char* username,
