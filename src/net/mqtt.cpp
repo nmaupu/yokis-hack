@@ -29,12 +29,13 @@ void Mqtt::setConnectionInfo(const char* host, uint16_t port, const char* userna
     this->setUsername(username);
     this->setPassword(password);
     this->MqttConfig::saveToLittleFS();
+    //this->MqttConfig::printDebug(LOG);
 
     if (this->connected()) {
         this->disconnect();
     }
     this->setServer(getHost().c_str(), getPort());
-    this->reconnect();
+    this->reconnect(true);
 }
 
 boolean Mqtt::subscribe(const char* topic) {
@@ -64,7 +65,7 @@ void Mqtt::clearSubscriptions() {
     subscribedTopicIdx = 0;
 }
 
-bool Mqtt::reconnect() {
+bool Mqtt::reconnect(bool force=false) {
     // No configuration available
     if (this->MqttConfig::isEmpty()) {
         return false;
@@ -72,12 +73,14 @@ bool Mqtt::reconnect() {
 
     // Retry once in a while to avoid blocking serial console
     // Handling too big unsigned long
-    if(lastConnectionRetry > ULONG_MAX - MQTT_CONNECT_RETRY_EVERY_MS) {
-        lastConnectionRetry = 0;
-    }
-    if (lastConnectionRetry!=0 && lastConnectionRetry + MQTT_CONNECT_RETRY_EVERY_MS >= millis()) { // millis resets every 72 minutes
-        // Too soon
-        return false;
+    if(!force) {
+        if(lastConnectionRetry > ULONG_MAX - MQTT_CONNECT_RETRY_EVERY_MS) {
+            lastConnectionRetry = 0;
+        }
+        if (lastConnectionRetry!=0 && lastConnectionRetry + MQTT_CONNECT_RETRY_EVERY_MS >= millis()) { // millis resets every 72 minutes
+            // Too soon
+            return false;
+        }
     }
 
     lastConnectionRetry = millis();
@@ -125,6 +128,11 @@ void Mqtt::callback(char* topic, uint8_t* payload, unsigned int length) {
 
     LOG.println();
     LOG.println("-----------------------");
+}
+
+MqttConfig Mqtt::getConfig() {
+    MqttConfig config(this->getHost().c_str(), this->getPort(), this->getUsername().c_str(), this->getPassword().c_str());
+    return config;
 }
 
 #endif

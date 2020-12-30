@@ -23,7 +23,7 @@ MqttConfig::MqttConfig(const char* host, uint16_t port, const char* username, co
 
 void MqttConfig::setHost(String host) { this->host = host; }
 
-void MqttConfig::setPort(uint16_t){ this->port = port; }
+void MqttConfig::setPort(uint16_t port){ this->port = port; }
 
 void MqttConfig::setUsername(String username) { this->username = username; }
 

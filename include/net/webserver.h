@@ -15,34 +15,34 @@ const char html_config_form[] PROGMEM = R"rawliteral(
         <title>Yokis-Hack configuration page</title>
         <style>
             input[type=text], input[type=password], select {
-            width: 100%%;
-            padding: 12px 20px;
-            margin: 8px 0;
-            display: inline-block;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            box-sizing: border-box;
+                width: 100%%;
+                padding: 12px 20px;
+                margin: 8px 0;
+                display: inline-block;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                box-sizing: border-box;
             }
 
             input[type=submit] {
-            width: 100%%;
-            background-color: #4CAF50;
-            color: white;
-            padding: 14px 20px;
-            margin: 8px 0;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
+                width: 100%%;
+                background-color: #4CAF50;
+                color: white;
+                padding: 14px 20px;
+                margin: 8px 0;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
             }
 
             input[type=submit]:hover {
-            background-color: #45a049;
+                background-color: #45a049;
             }
 
             div {
-            border-radius: 5px;
-            background-color: #f2f2f2;
-            padding: 20px;
+                border-radius: 5px;
+                background-color: #f2f2f2;
+                padding: 20px;
             }
 
              /* The alert message box */
@@ -61,19 +61,19 @@ const char html_config_form[] PROGMEM = R"rawliteral(
 
             /* The close button */
             .closebtn {
-            margin-left: 15px;
-            color: white;
-            font-weight: bold;
-            float: right;
-            font-size: 22px;
-            line-height: 20px;
-            cursor: pointer;
-            transition: 0.3s;
+                margin-left: 15px;
+                color: white;
+                font-weight: bold;
+                float: right;
+                font-size: 22px;
+                line-height: 20px;
+                cursor: pointer;
+                transition: 0.3s;
             }
 
             /* When moving the mouse over the close button */
             .closebtn:hover {
-            color: black;
+                color: black;
             }
         </style>
         <script>
@@ -92,27 +92,27 @@ const char html_config_form[] PROGMEM = R"rawliteral(
         <div id="message"></div>
 
         <div>
-        <form action="/config">
+        <form action="/save_config">
 
         <h2>WiFi</h2>
         <label for="wifi_ssid">SSID:</label>
-        <input type="text" id="wifi_ssid" name="wifi_ssid" value="%WIFI_SSID%" placeholder="Enter your WiFi SSID">
+        <input %WIFI_SECTION_ENABLED% type="text" id="wifi_ssid" name="wifi_ssid" value="%WIFI_SSID%" placeholder="Enter your WiFi SSID">
 
         <label for="wifi_password">Password:</label>
-        <input type="password" id="wifi_password" name="wifi_password" value="%WIFI_PASSWORD%" placeholder="Enter your WiFi password">
+        <input %WIFI_SECTION_ENABLED% type="password" id="wifi_password" name="wifi_password" value="%WIFI_PASSWORD%" placeholder="Enter your WiFi password">
 
         <h2>MQTT</h2>
         <label for="mqtt_ip">IP:</label>
-        <input type="text" id="mqtt_ip" name="mqtt_ip" placeholder="192.168.0.1">
+        <input %MQTT_SECTION_ENABLED% type="text" id="mqtt_ip" name="mqtt_ip" value="%MQTT_IP%" placeholder="192.168.0.1">
 
         <label for="mqtt_port">Port:</label>
-        <input type="text" id="mqtt_port" name="mqtt_port" placeholder="1883">
+        <input %MQTT_SECTION_ENABLED% type="text" id="mqtt_port" name="mqtt_port" value="%MQTT_PORT%" placeholder="1883">
 
         <label for="mqtt_username">Username:</label>
-        <input type="text" id="mqtt_username" name="mqtt_username" placeholder="Username to connect to MQTT">
+        <input %MQTT_SECTION_ENABLED% type="text" id="mqtt_username" name="mqtt_username" value="%MQTT_USERNAME%" placeholder="Username to connect to MQTT">
 
         <label for="mqtt_password">Password:</label>
-        <input type="password" id="mqtt_password" name="mqtt_password" placeholder="Password to connect to MQTT">
+        <input %MQTT_SECTION_ENABLED% type="password" id="mqtt_password" name="mqtt_password" value="%MQTT_PASSWORD%" placeholder="Password to connect to MQTT">
 
         <input type="submit" value="Save configuration">
 

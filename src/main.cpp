@@ -792,11 +792,11 @@ bool mqttConfig(const char* params) {
     config.setHost(host);
 
     sport = strtok(NULL, " ");     // Get the port
-    if(sport == NULL || strlen(sport) > 5) {
+    if(sport == NULL || strlen(sport) == 0 || strlen(sport) > 5) {
         LOG.println("MQTT port is null or too high. Aborting.");
         return false;
     }
-    config.setPort(atoi(sport));
+    config.setPort((uint16_t)atol(sport));
 
     username = strtok(NULL, " "); // Get the username
     config.setUsername(username);

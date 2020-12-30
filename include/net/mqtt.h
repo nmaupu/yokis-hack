@@ -26,8 +26,9 @@ class Mqtt : public PubSubClient, public MqttConfig {
     void setConnectionInfo(const char*, uint16_t, const char*, const char*);
     boolean subscribe(const char*);
     void clearSubscriptions();
-    bool reconnect();
+    bool reconnect(bool);
     boolean loop();
+    MqttConfig getConfig();
 };
 
 #endif
