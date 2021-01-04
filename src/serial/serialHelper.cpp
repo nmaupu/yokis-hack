@@ -108,8 +108,11 @@ void SerialHelper::extractCommand(char* buf) {
 }
 
 void SerialHelper::usage() {
-    LOG.println(PROG_TITLE);
+    char buf[64];
+    sprintf(buf, PROG_TITLE_FORMAT, PROG_VERSION);
+    LOG.println(buf);
     LOG.println();
+
     for (uint8_t i = 0; i < callbacksIndex; i++) {
         LOG.print(callbacks[i]->getCommand());
         unsigned int nbSpaces =

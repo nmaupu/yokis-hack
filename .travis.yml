@@ -1,64 +1,29 @@
-# Continuous Integration (CI) is the practice, in software
-# engineering, of merging all developer working copies with a shared mainline
-# several times a day < https://docs.platformio.org/page/ci/index.html >
-#
-# Documentation:
-#
-# * Travis CI Embedded Builds with PlatformIO
-#   < https://docs.travis-ci.com/user/integration/platformio/ >
-#
-# * PlatformIO integration with Travis CI
-#   < https://docs.platformio.org/page/ci/travis.html >
-#
-# * User Guide for `platformio ci` command
-#   < https://docs.platformio.org/page/userguide/cmd_ci.html >
-#
-#
-# Please choose one of the following templates (proposed below) and uncomment
-# it (remove "# " before each line) or use own configuration according to the
-# Travis CI documentation (see above).
-#
-
-
-#
-# Template #1: General project. Test it using existing `platformio.ini`.
-#
-
 language: python
 python:
-  - "2.7"
+  - "3.9"
 sudo: false
+
 cache:
   directories:
     - "~/.platformio"
+    - $HOME/.cache/pip
+
 install:
   - pip install -U platformio
-  - platformio update
+  - pio update
+
 script:
-  - platformio run
+  - export PROG_VERSION=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH; else echo $TRAVIS_PULL_REQUEST_BRANCH; fi)
+  - pio run
 
+before_deploy:
+  - pio run -e d1_mini -c platformio.ini
 
-#
-# Template #2: The project is intended to be used as a library with examples.
-#
-
-# language: python
-# python:
-#     - "2.7"
-#
-# sudo: false
-# cache:
-#     directories:
-#         - "~/.platformio"
-#
-# env:
-#     - PLATFORMIO_CI_SRC=path/to/test/file.c
-#     - PLATFORMIO_CI_SRC=examples/file.ino
-#     - PLATFORMIO_CI_SRC=path/to/test/directory
-#
-# install:
-#     - pip install -U platformio
-#     - platformio update
-#
-# script:
-#     - platformio ci --lib="." --board=ID_1 --board=ID_2 --board=ID_N
+deploy:
+  provider: releases
+  api_key:
+    secure: "MbDiYoDUbZ2bcpCmSSS6hwJB2BNt/dzoRnVT1ww+8RSjeJyIS3pN2bBgcIJnoO9kfVwoOyJWn0VUdC47H+lO7+cikYx40U0L3AAcUcoYHLJXXmjcYpq369bBqoV8DHcoQvfPEmLIbRkMf0NrTx6qzXWFt4wNdBzEgO3e3QCTb50TLXP7jWiedkM1GMxIR7g+PWTEvW71TtZ6z4JZMJPsG7kNoAF7RBTU/xHolqvO8Hb6TAgfZfz0NV/GV+lgOvtE5cdbifSZqEgsXsRpWC09J3STBCAC88kuk69cI8krhhv471RAmCkfWBocIQMlQNPrUlqRjMCVk+0mNSGt6lSZE6+YjO+p1peDOk+e6xQyrh8HILLz8rMWTMj0fhL1RflCzwLWOZy9PGtG3nQ52ZhAvbEZzuR+7/xqd/k7vtf1M4z5x7SUKwmkQk+TAQ+TCOHFjuwqoGC6FL9hY8aK6kcg8mKtJOmbKo/XtITa78kvj3yOpiwD8KI0bTnNlq2//XMoIQv+SDGL2AJrbL8tHJRdmEKPA0VDR1tLhtnDU9b3VDe2KTdJAHjmqHKE0rSMVH6b1Ca4j/tgakBLKrE95T8o/AtVgua5Uh5A38ACBc0pjQaZP3+W+6/UcDTx/Td9EVP2ofsYzlUilruyEX7WdllZNiM/yNIjEQz3nft3IbL8isU="
+  file: .pio/build/d1_mini/firmware.bin
+  skip_cleanup: true
+  on:
+    tags: true

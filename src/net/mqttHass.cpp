@@ -1,19 +1,35 @@
 #ifdef ESP8266
 #include "net/mqttHass.h"
 #include "RF/device.h"
+#include "globals.h"
+
+MqttHass::MqttHass(WiFiClient& wifiClient) : Mqtt(wifiClient) {
+    MqttConfig config = MqttConfig::loadFromLittleFS();
+
+    if(!config.isEmpty()) {
+        this->setConnectionInfo(config, false);
+    }
+}
 
 MqttHass::MqttHass(WiFiClient& wifiClient, const char* host,
-                   const uint16_t* port, const char* username,
+                   const uint16_t port, const char* username,
                    const char* password)
-    : Mqtt(wifiClient, host, port, username, password) {}
+    : Mqtt(wifiClient) {
+        this->setConnectionInfo(host, port, username, password, false);
+}
+
+bool MqttHass::isDiscoveryDone() {
+    return discoveryDone;
+}
+
+void MqttHass::setDiscoveryDone(bool status) {
+    discoveryDone = status;
+}
 
 // Get JSON message to publish for HASS discovery
-char* MqttHass::newMessageJson(const Device* device) {
-    char bufMessage[1024];
-    char* ret;
-
+char* MqttHass::newMessageJson(const Device* device, char* buf) {
     if (device->getMode() == DIMMER) {
-        sprintf(bufMessage,
+        sprintf(buf,
                 "{"
                 "\"name\":\"%s dimmer\","
                 "\"optimistic\":\"false\","  // if false, cannot know the status
@@ -42,7 +58,7 @@ char* MqttHass::newMessageJson(const Device* device) {
                 device->getName(), device->getName(), device->getName(),
                 device->getName(), device->getName());
     } else {
-        sprintf(bufMessage,
+        sprintf(buf,
                 "{"
                 "\"name\":\"%s switch\","
                 "\"optimistic\":\"false\","  // if false, cannot know the status
@@ -68,41 +84,37 @@ char* MqttHass::newMessageJson(const Device* device) {
                 device->getName(), device->getName());
     }
 
-    ret = new char[strlen(bufMessage) + 1];
-    strcpy(ret, bufMessage);
-    return ret;
+    return buf;
 }
 
-char* MqttHass::newPublishTopic(const Device* device) {
-    char bufTopic[128];
-    char* ret;
-
-    sprintf(bufTopic, "%s/light/%s/config", HASS_PREFIX, device->getName());
-
-    ret = new char[strlen(bufTopic) + 1];
-    strcpy(ret, bufTopic);
-    return ret;
+char* MqttHass::newPublishTopic(const Device* device, char* buf) {
+    sprintf(buf, "%s/light/%s/config", HASS_PREFIX, device->getName());
+    return buf;
 }
 
 // Publish device to MQTT for HASS discovery
 bool MqttHass::publishDevice(const Device* device) {
     bool ret;
-    char* topic = newPublishTopic(device);
-    char* payload = newMessageJson(device);
+    char topic[128];
+    char payload[MQTT_MAX_PACKET_SIZE];
 
-    /*
-    LOG.print(topic);
-    LOG.print("=");
-    LOG.println(payload);
-    */
+    newPublishTopic(device, topic);
+    newMessageJson(device, payload);
+
+    LOG.print("Sending MQTT message, topic_len=");
+    LOG.print(strlen(topic));
+    LOG.print(", payload_len=");
+    LOG.println(strlen(payload));
 
     ret = this->publish(topic, payload, true);
     if (ret) {
         notifyOnline(device);
     }
 
-    delete[] topic;
-    delete[] payload;
+    if(ret) {
+        setDiscoveryDone(true);
+    }
+
     return ret;
 }
 

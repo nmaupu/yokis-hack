@@ -8,7 +8,7 @@
 #include <TelnetSpy.h>
 #endif
 
-#define MAX_NUMBER_OF_COMMANDS 32
+#define MAX_NUMBER_OF_COMMANDS 64
 #define MAX_COMMAND_LENGTH 32
 #define MAX_COMMAND_FULL_LENGTH 256
 
