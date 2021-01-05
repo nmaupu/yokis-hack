@@ -1,29 +1,24 @@
 language: python
 python:
-  - "3.9"
+- '3.9'
 sudo: false
-
 cache:
   directories:
-    - "~/.platformio"
-    - $HOME/.cache/pip
-
+  - "~/.platformio"
+  - "$HOME/.cache/pip"
 install:
-  - pip install -U platformio
-  - pio update
-
+- pip install -U platformio
+- pio update
 script:
-  - export PROG_VERSION=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH; else echo $TRAVIS_PULL_REQUEST_BRANCH; fi)
-  - pio run
-
+- export PROG_VERSION=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH;
+  else echo $TRAVIS_PULL_REQUEST_BRANCH; fi)
+- pio run
 before_deploy:
-  - pio run -e d1_mini -c platformio.ini
-
+- pio run -e d1_mini -c platformio.ini
 deploy:
   provider: releases
-  api_key:
-    secure: "MbDiYoDUbZ2bcpCmSSS6hwJB2BNt/dzoRnVT1ww+8RSjeJyIS3pN2bBgcIJnoO9kfVwoOyJWn0VUdC47H+lO7+cikYx40U0L3AAcUcoYHLJXXmjcYpq369bBqoV8DHcoQvfPEmLIbRkMf0NrTx6qzXWFt4wNdBzEgO3e3QCTb50TLXP7jWiedkM1GMxIR7g+PWTEvW71TtZ6z4JZMJPsG7kNoAF7RBTU/xHolqvO8Hb6TAgfZfz0NV/GV+lgOvtE5cdbifSZqEgsXsRpWC09J3STBCAC88kuk69cI8krhhv471RAmCkfWBocIQMlQNPrUlqRjMCVk+0mNSGt6lSZE6+YjO+p1peDOk+e6xQyrh8HILLz8rMWTMj0fhL1RflCzwLWOZy9PGtG3nQ52ZhAvbEZzuR+7/xqd/k7vtf1M4z5x7SUKwmkQk+TAQ+TCOHFjuwqoGC6FL9hY8aK6kcg8mKtJOmbKo/XtITa78kvj3yOpiwD8KI0bTnNlq2//XMoIQv+SDGL2AJrbL8tHJRdmEKPA0VDR1tLhtnDU9b3VDe2KTdJAHjmqHKE0rSMVH6b1Ca4j/tgakBLKrE95T8o/AtVgua5Uh5A38ACBc0pjQaZP3+W+6/UcDTx/Td9EVP2ofsYzlUilruyEX7WdllZNiM/yNIjEQz3nft3IbL8isU="
-  file: .pio/build/d1_mini/firmware.bin
+  api_key: $GITHUB_TOKEN
+  file: ".pio/build/d1_mini/firmware.bin"
   skip_cleanup: true
   on:
     tags: true
