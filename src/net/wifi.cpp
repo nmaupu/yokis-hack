@@ -7,7 +7,7 @@ void setupWifi(String ssid, String password) {
     if (strcmp(WiFi.SSID().c_str(), ssid.c_str()) != 0 ||
         strcmp(WiFi.psk().c_str(), password.c_str()) != 0) {
 
-        WiFi.mode(WIFI_AP_STA);
+        WiFi.mode(WIFI_STA);
         WiFi.setAutoReconnect(true);
         ETS_UART_INTR_DISABLE();
         wifi_station_disconnect();
@@ -19,6 +19,10 @@ void setupWifi(String ssid, String password) {
 
 void setupWifi() {
     WiFi.mode(WIFI_STA);
+    ETS_UART_INTR_DISABLE();
+    wifi_station_disconnect();
+    ETS_UART_INTR_ENABLE();
+    WiFi.begin(WiFi.SSID().c_str(), WiFi.psk().c_str());
 
     uint8_t c = 0;
 

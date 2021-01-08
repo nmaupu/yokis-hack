@@ -87,8 +87,8 @@ bool Mqtt::reconnect(bool force) {
     }
 
     // Retry once in a while to avoid blocking serial console
-    // Handling too big unsigned long
     if(!force) {
+        // Handling too big unsigned long
         if(lastConnectionRetry > ULONG_MAX - MQTT_CONNECT_RETRY_EVERY_MS) {
             lastConnectionRetry = 0;
         }
@@ -123,8 +123,10 @@ boolean Mqtt::loop() {
         return false;
     }
 
-    if(!this->connected()) {
-        this->reconnect();
+    if (!this->connected()) {
+        if (!this->reconnect()) {
+            return false;
+        }
     }
 
     // Call parent function
