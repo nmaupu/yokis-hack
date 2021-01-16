@@ -56,6 +56,9 @@ void pollForStatus(Device* device);
 void mqttCallback(char*, uint8_t*, unsigned int);
 #endif // MQTT_ENABLED
 
+// debug heap usage
+unsigned long lastDebugHeap;
+
 #endif // ESP8266
 
 // Setup inits everything: singletons and commands' callback
@@ -71,6 +74,7 @@ void setup() {
     g_currentDevice = new Device(CURRENT_DEVICE_DEFAULT_NAME);
 
 #ifdef ESP8266
+    lastDebugHeap = millis();
     pinMode(STATUS_LED, OUTPUT);
     digitalWrite(STATUS_LED, HIGH);  // pin is inverted so, set it off
 
@@ -150,7 +154,19 @@ void loop() {
     LOG.handle(); // telnetspy handling
     ArduinoOTA.handle();
 
-    #if defined(MQTT_ENABLED)
+#ifdef ESP8266
+    if(lastDebugHeap + 10000 < millis()) {
+        lastDebugHeap = millis();
+        uint32_t heapFree;
+        uint16_t heapMax;
+        uint8_t heapFrag;
+        ESP.getHeapStats(&heapFree, &heapMax, &heapFrag);
+        LOG.printf("free heap: %ld, max free blk size: %d, frag: %d%%, free stack: %ld\n", (long int)heapFree, heapMax,
+                   heapFrag, (long int)ESP.getFreeContStack());
+    }
+#endif
+
+#if defined(MQTT_ENABLED)
     bool mqttLoop = g_mqtt->loop();
     if (!mqttLoop && g_mqtt->isDiscoveryDone()) {
         // loop is faulty, network is down ?
