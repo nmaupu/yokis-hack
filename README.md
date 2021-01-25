@@ -55,6 +55,12 @@ dRestore lamp|6f4d|2d|00|00|490020|9f84|0000
 - Make a backup of your configuration using the command `dConfigFS` (copy the content of the command's result somewhere safe)
 - Upgrade using OTA or with `esptools.py`
 - In case of issue with your config, restore it line by line using the command `dRestore`
+- In case of weird bug (module stops functioning, weird stuff in the Serial, etc.), you need to completely erase the flash of the ESP8266 and reburn the firmware.
+  Erase can be done with:
+  ```
+  esptool.py -p /dev/<serial_port> erase_flash
+  ```
+  
 
 ## Usage
 
