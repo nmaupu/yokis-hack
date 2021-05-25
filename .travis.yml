@@ -17,7 +17,8 @@ before_deploy:
 - pio run -e d1_mini -c platformio.ini
 deploy:
   provider: releases
-  api_key: $GITHUB_TOKEN
+  api_key:
+    secure: jMsF2l7qpGkvIlmBz14JO0sbj3AVv0RtjzAKMK2KzhSUhMZ6U6NXo+ANL36jCxpiEcq4k8v/C6M9bDRqkhRcKIQuowIyzABb3hBq2muiNTYQ6A5oQQLJamDzmZmQBmPsGu5Bb9dpeEQsqAHrtJm0xRWSFS7lwdJ7M5Yel7CTnckv7UFP0VYphgpX6B6eRU7myJBgt0VSlS0cPGG8mms+hAG6z+98Jo0afBKcWieypL/3zopynTiNmFPkMJJfcfFezX9PefohCcHDW55DQuvMMUnxpKuJVUYZkFKoTQeyke1RG7NoEIXVlhdOS7iy5v6y+RL0k7fdWqiqfhOxKDqzOW30ETDmy1VFz17He6kCo2mtiz36yk+Xzs9LR31LBmLIBz0vVoNER4oYFpuAu2OoR1yqtl5IYZKp31TqwBW5R2CenhpqWGoUrKXAfzZzmiVvet3b0aW4g3XXwt/DIxNgCNImMuB7eBfcj9yTXCx4GCe822OmrcMXFe/rS+yOdY++W+XlAJz9Hbpv61iG/0fTFmQAMfStxHGEdVEe4KgBwU4gdQOoI7s2YMT8UgPbHmudLcDI788phn2xUl+Z+stoJ3+5rNI6MIxUi5D3TlwyWvG4eN6hmROxa8NNQ/IcM2UEu+S6fSECHY8tGv4XHiGjwWywNPRyGP58XAJS13s9AQU=
   file: ".pio/build/d1_mini/firmware.bin"
   skip_cleanup: true
   on:
