@@ -7,7 +7,10 @@ void setupWifi(String ssid, String password) {
     if (strcmp(WiFi.SSID().c_str(), ssid.c_str()) != 0 ||
         strcmp(WiFi.psk().c_str(), password.c_str()) != 0) {
 
-        WiFi.mode(WIFI_AP_STA);
+        WiFi.disconnect(true);
+        WiFi.persistent(true);
+        WiFi.mode(WIFI_STA);
+        WiFi.setSleepMode(WIFI_NONE_SLEEP);
         WiFi.setAutoReconnect(true);
         ETS_UART_INTR_DISABLE();
         wifi_station_disconnect();
@@ -17,8 +20,13 @@ void setupWifi(String ssid, String password) {
     }
 }
 
-void setupWifi() {
+int reconnectWifi() {
+    //WiFi.disconnect(true); // this makes wifi not connecting somehow
     WiFi.mode(WIFI_STA);
+    WiFi.setSleepMode(WIFI_NONE_SLEEP);
+    WiFi.setAutoReconnect(true);
+    WiFi.reconnect();
+
 
     uint8_t c = 0;
 
@@ -29,9 +37,18 @@ void setupWifi() {
         if (WiFi.status() == WL_CONNECTED) {  // ok
             LOG.print(" connected to SSID ");
             LOG.println(WiFi.SSID());
-            return;
+            return WiFi.status();
         }
         delay(500);
+    }
+
+    LOG.println(" unable to connect to wifi.");
+    return WiFi.status();
+}
+
+void setupWifi() {
+    if (reconnectWifi() == WL_CONNECTED) {
+        return;
     }
 
     if (strlen(WiFi.SSID().c_str()) > 0) {

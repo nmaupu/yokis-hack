@@ -151,14 +151,10 @@ void loop() {
     ArduinoOTA.handle();
 
     #if defined(MQTT_ENABLED)
-    bool mqttLoop = g_mqtt->loop();
-    if (!mqttLoop && g_mqtt->isDiscoveryDone()) {
-        // loop is faulty, network is down ?
-        setupWifi();
-    }
+    g_mqtt->loop();
 
     uint8_t nbDevices = 0;
-    if (g_mqtt->connected()  && !g_mqtt->isDiscoveryDone()) {
+    if (g_mqtt->connected() && !g_mqtt->isDiscoveryDone()) {
         LOG.print("Publishing homeassistant discovery data... ");
         for (uint8_t i = 0; i < MQTT_MAX_NUM_OF_YOKIS_DEVICES; i++) {
             if (g_devices[i] != NULL) {
@@ -176,7 +172,7 @@ void loop() {
 
         if (g_mqtt->isDiscoveryDone()) LOG.println("OK");
 
-    } else if (g_mqtt->isDiscoveryDone()) {
+    } else if (g_mqtt->connected() && g_mqtt->isDiscoveryDone()) {
         // Verify polling statuses and update via MQTT if needed
         for (uint8_t i = 0;
              i < MQTT_MAX_NUM_OF_YOKIS_DEVICES && FLAG_IS_ENABLED(FLAG_POLLING);
