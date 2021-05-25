@@ -150,15 +150,25 @@ void loop() {
     LOG.handle(); // telnetspy handling
     ArduinoOTA.handle();
 
+    
+    /*
+    int state = WiFi.status();
+    if (state == WL_DISCONNECTED && WiFi.getMode() != WIFI_AP) {
+        LOG.println("Wifi disconnected, trying to reconnect.");
+        reconnectWifi();
+    }
+    */
+
     #if defined(MQTT_ENABLED)
     bool mqttLoop = g_mqtt->loop();
-    if (!mqttLoop && g_mqtt->isDiscoveryDone()) {
+    /*if (!mqttLoop && g_mqtt->isDiscoveryDone()) {
         // loop is faulty, network is down ?
-        setupWifi();
-    }
+        LOG.println("MQTT loop is faulty");
+        //reconnectWifi();
+    }*/
 
     uint8_t nbDevices = 0;
-    if (g_mqtt->connected()  && !g_mqtt->isDiscoveryDone()) {
+    if (g_mqtt->connected() && !g_mqtt->isDiscoveryDone()) {
         LOG.print("Publishing homeassistant discovery data... ");
         for (uint8_t i = 0; i < MQTT_MAX_NUM_OF_YOKIS_DEVICES; i++) {
             if (g_devices[i] != NULL) {

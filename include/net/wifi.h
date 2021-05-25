@@ -4,6 +4,7 @@
 
 #include <ESP8266WiFi.h>
 
+int reconnectWifi();
 void setupWifi();
 void setupWifi(const String ssid, const String password);
 void setupWifiAP();
