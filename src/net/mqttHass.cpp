@@ -60,7 +60,7 @@ char* MqttHass::newMessageJson(const Device* device, char* buf) {
     } else if (device->getMode() == SHUTTER) {
         sprintf(buf,
                 "{"
-                "\"name\":\"Volet %s\","
+                "\"name\":\"Shutter %s\","
                 "\"optimistic\":\"false\","  // if false, cannot know the status
                                              // of the device
                 "\"cmd_t\":\"~cmnd/POWER\","
