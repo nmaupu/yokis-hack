@@ -183,6 +183,7 @@ DeviceStatus E2bp::pollForStatus() {
 }
 
 // Get device mode from previous received data from the device
+// This way of detecting devices is not working. Shutter devices may return various values.
 DeviceMode E2bp::getDeviceModeFromRecvData() {
     switch (answerBuf[0]) {
         case 0:
@@ -269,11 +270,9 @@ bool E2bp::pressAndHoldFor(unsigned long duration) {
 // Fill a given buffer with the correct payload and return a pointer to it
 uint8_t* E2bp::getPayload(uint8_t* buf, PayloadType type) {
     buf[0] = 0x00;
-    buf[1] = device->getMode() == SHUTTER ? 0x16 : 0x04;
+    buf[1] = device->getMode() == SHUTTER ? 0x06 : 0x04;  // 0x16 = Drive all shutters connected to the bus.
     buf[2] = 0x00;
-    buf[3] = 0x20;
-    buf[4] = device->getHardwareAddress()[0];
-    buf[5] = device->getHardwareAddress()[1];
+    buf[3] = 0x00;  // Initial project was using 0x20. Might be used to drive specific device over the bus, using another device as gateway?
     buf[4] = 0x00;
     buf[5] = 0x00;
     buf[6] = random(0, 0xff);
