@@ -57,6 +57,32 @@ char* MqttHass::newMessageJson(const Device* device, char* buf) {
                 "}",
                 device->getName(), device->getName(), device->getName(),
                 device->getName(), device->getName());
+    } else if (device->getMode() == SHUTTER) {
+        sprintf(buf,
+                "{"
+                "\"name\":\"Volet %s\","
+                "\"optimistic\":\"false\","  // if false, cannot know the status
+                                             // of the device
+                "\"cmd_t\":\"~cmnd/POWER\","
+                "\"state_topic\":\"~tele/STATE\","
+                "\"val_tpl\":\"{{value_json.POWER}}\","
+                "\"avty_t\":\"~tele/LWT\","
+                "\"pl_avail\":\"Online\","
+                "\"pl_not_avail\":\"Offline\","
+                "\"payload_close\":\"OFF\","
+                "\"payload_open\":\"ON\","
+                "\"payload_stop\":\"PAUSE\","
+                "\"uniq_id\":\"esp-%s\","
+                "\"device\":{"
+                "\"name\":\"%s\","
+                "\"identifiers\":[\"esp-%s\"],"
+                "\"model\":\"MVR500ERP \","
+                "\"mf\":\"Yokis\""
+                "},"
+                "\"~\":\"%s/\""
+                "}",
+                device->getName(), device->getName(), device->getName(),
+                device->getName(), device->getName());
     } else {
         sprintf(buf,
                 "{"
@@ -88,7 +114,11 @@ char* MqttHass::newMessageJson(const Device* device, char* buf) {
 }
 
 char* MqttHass::newPublishTopic(const Device* device, char* buf) {
-    sprintf(buf, "%s/light/%s/config", HASS_PREFIX, device->getName());
+    if (device->getMode() == SHUTTER) { 
+        sprintf(buf, "%s/cover/%s/config", HASS_PREFIX, device->getName());
+    } else {
+        sprintf(buf, "%s/light/%s/config", HASS_PREFIX, device->getName());
+    }
     return buf;
 }
 
@@ -168,6 +198,9 @@ void MqttHass::subscribeDevice(const Device* device) {
         sprintf(buf, "%s/cmnd/POWER", device->getName());
         this->subscribe(buf);
         sprintf(buf, "%s/cmnd/BRIGHTNESS", device->getName());
+        this->subscribe(buf);
+    } else if (device->getMode() == SHUTTER) {
+        sprintf(buf, "%s/cmnd/POWER", device->getName());
         this->subscribe(buf);
     }
 }
