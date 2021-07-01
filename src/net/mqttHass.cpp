@@ -66,6 +66,8 @@ char* MqttHass::newMessageJson(const Device* device, char* buf) {
                 "\"cmd_t\":\"~cmnd/POWER\","
                 "\"state_topic\":\"~tele/STATE\","
                 "\"val_tpl\":\"{{value_json.POWER}}\","
+//                "\"tilt_status_topic\": \"~tele/TILT\","
+//                "\"tilt_status_template\":\"{{value_json.TILT}}\","
                 "\"avty_t\":\"~tele/LWT\","
                 "\"pl_avail\":\"Online\","
                 "\"pl_not_avail\":\"Offline\","
