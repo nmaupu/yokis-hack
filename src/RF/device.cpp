@@ -81,8 +81,16 @@ const char* Device::getStatusAsString(DeviceStatus status) {
             return "OFF";
         case UNDEFINED:
             return "UNDEFINED";
-        case PAUSE_SHUTTER:
-            return "PAUSE_SHUTTER";
+        case SHUTTER_STOPPED:
+            return "stopped";
+        case SHUTTER_OPENING:
+            return "opening";
+        case SHUTTER_CLOSING:
+            return "closing";
+        case SHUTTER_OPENED:
+            return "open";
+        case SHUTTER_CLOSED:
+            return "closed";
     }
 
     return NULL;
@@ -218,8 +226,8 @@ void Device::toggleStatus() {
         case UNDEFINED:
             setStatus(UNDEFINED);
             break;
-        case PAUSE_SHUTTER:
-            setStatus(PAUSE_SHUTTER);
+        case SHUTTER_STOPPED:
+            setStatus(SHUTTER_STOPPED);
             break;
         case OFF:
             setStatus(ON);

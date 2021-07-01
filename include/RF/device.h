@@ -28,7 +28,7 @@ enum DeviceMode {
     SHUTTER   // Shutter style devices (MVR500)
 };
 
-enum DeviceStatus { OFF = 0, ON, UNDEFINED, PAUSE_SHUTTER };
+enum DeviceStatus { OFF = 0, ON, UNDEFINED, SHUTTER_OPENING, SHUTTER_CLOSING, SHUTTER_STOPPED, SHUTTER_OPENED, SHUTTER_CLOSED};
 
 enum DeviceAvailability { OFFLINE = 0, ONLINE };
 

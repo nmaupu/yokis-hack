@@ -17,7 +17,9 @@ enum PayloadType {
     PL_ON,
     PL_OFF,
     PL_DIM,
-    PL_SHUTTERPAUSE
+    PL_SHUTTERPAUSE,
+    PL_SHUTTEROPENING,
+    PL_SHUTTERCLOSING
 };
 
 // Very low level class to control a Yokis device just like a e2bp remote
