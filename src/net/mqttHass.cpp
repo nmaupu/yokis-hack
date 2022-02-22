@@ -42,7 +42,7 @@ char* MqttHass::newMessageJson(const Device* device, char* buf) {
                 "\"cmd_t\":\"~cmnd/POWER\","
                 "\"pl_off\":\"OFF\","
                 "\"state_topic\":\"~tele/STATE\","
-                "\"val_tpl\":\"{{value_json.POWER}}\","
+                "\"state_value_template\":\"{{value_json.POWER}}\","
                 "\"avty_t\":\"~tele/LWT\","
                 "\"pl_avail\":\"Online\","
                 "\"pl_not_avail\":\"Offline\","
@@ -65,7 +65,7 @@ char* MqttHass::newMessageJson(const Device* device, char* buf) {
                                              // of the device
                 "\"cmd_t\":\"~cmnd/POWER\","
                 "\"state_topic\":\"~tele/STATE\","
-                "\"val_tpl\":\"{{value_json.POWER}}\","
+                "\"state_value_template\":\"{{value_json.POWER}}\","
                 "\"pl_off\":\"OFF\","
                 "\"pl_on\":\"ON\","
                 "\"avty_t\":\"~tele/LWT\","
