@@ -43,8 +43,14 @@ bool E2bp::setDeviceStatus(DeviceStatus ds) {
     reset();
     setupRFModule();
     // For all devices, use the on or off payload except for shutters
-    if(device->getMode() == SHUTTER && ds == PAUSE_SHUTTER) {
-        getPayload(buf, PL_SHUTTERPAUSE);
+    if(device->getMode() == SHUTTER ) {
+        if (ds == SHUTTER_STOPPED) {
+            getPayload(buf, PL_SHUTTERPAUSE);
+        } else if (ds == SHUTTER_OPENING) {
+            getPayload(buf, PL_SHUTTEROPENING);
+        } else if (ds == SHUTTER_CLOSING) {
+            getPayload(buf, PL_SHUTTERCLOSING);
+        }
     } else {
         getPayload(buf, ds == ON ? PL_ON : PL_OFF);
     }
@@ -66,11 +72,23 @@ bool E2bp::setDeviceStatus(DeviceStatus ds) {
     return ret;
 }
 
-bool E2bp::on() { return setDeviceStatus(ON); }
+bool E2bp::on() { 
+    if(device->getMode() == SHUTTER ) {
+        return setDeviceStatus(SHUTTER_OPENING);
+    } else {
+        return setDeviceStatus(ON); 
+    }
+}
 
-bool E2bp::off() { return setDeviceStatus(OFF); }
+bool E2bp::off() { 
+    if(device->getMode() == SHUTTER ) {
+        return setDeviceStatus(SHUTTER_CLOSING);
+    } else {
+        return setDeviceStatus(OFF); 
+    }
+}
 
-bool E2bp::pauseShutter() { return setDeviceStatus(PAUSE_SHUTTER); }
+bool E2bp::pauseShutter() { return setDeviceStatus(SHUTTER_STOPPED); }
 
 // Toggle a device
 // This function emulates a normal operated e2bp.
@@ -183,6 +201,7 @@ DeviceStatus E2bp::pollForStatus() {
 }
 
 // Get device mode from previous received data from the device
+// This way of detecting devices is not working. Shutter devices may return various values.
 DeviceMode E2bp::getDeviceModeFromRecvData() {
     switch (answerBuf[0]) {
         case 0:
@@ -269,11 +288,9 @@ bool E2bp::pressAndHoldFor(unsigned long duration) {
 // Fill a given buffer with the correct payload and return a pointer to it
 uint8_t* E2bp::getPayload(uint8_t* buf, PayloadType type) {
     buf[0] = 0x00;
-    buf[1] = device->getMode() == SHUTTER ? 0x16 : 0x04;
+    buf[1] = device->getMode() == SHUTTER ? 0x06 : 0x04;  // 0x16 = Drive all shutters connected to the bus.
     buf[2] = 0x00;
-    buf[3] = 0x20;
-    buf[4] = device->getHardwareAddress()[0];
-    buf[5] = device->getHardwareAddress()[1];
+    buf[3] = 0x00;  // Initial project was using 0x20. Might be used to drive specific device over the bus, using another device as gateway?
     buf[4] = 0x00;
     buf[5] = 0x00;
     buf[6] = random(0, 0xff);
@@ -291,7 +308,7 @@ uint8_t* E2bp::getPayload(uint8_t* buf, PayloadType type) {
             buf[0] = YOKIS_CMD_ON;
             break;
         case PL_OFF:
-            buf[0] = device->getMode() == SHUTTER ? YOKIS_CMD_OFF_SHUTTER : YOKIS_CMD_OFF;
+            buf[0] = device->getMode() == SHUTTER ? YOKIS_CMD_SHUTTER_OFF : YOKIS_CMD_OFF;
             break;
         case PL_STATUS:
             buf[0] = 0;
@@ -304,6 +321,12 @@ uint8_t* E2bp::getPayload(uint8_t* buf, PayloadType type) {
         case PL_SHUTTERPAUSE:
             buf[0] = YOKIS_CMD_SHUTTER_PAUSE;
             break;
+        case PL_SHUTTEROPENING:
+            buf[0] = YOKIS_CMD_ON;
+            break;
+        case PL_SHUTTERCLOSING:
+            buf[0] = YOKIS_CMD_SHUTTER_OFF;
+            break;        
     }
 
     return buf;
@@ -393,26 +416,62 @@ bool E2bp::runMainLoop() {
     if (available()) {
         read(answerBuf, 2);
 
-        if (IS_DEBUG_ENABLED) {
+//        if (IS_DEBUG_ENABLED) {
             LOG.print("Received: ");
+            LOG.print(device->getName());
+            LOG.print(" (");
+            LOG.print(device->getModeAsString(device->getMode()));
+            LOG.print(") ");
             printBinaryRepresentation(answerBuf[0], true);
             LOG.print(" ");
             printBinaryRepresentation(answerBuf[1], true);
-            LOG.println();
-        }
+             LOG.print(" - ");
+//        }
 
         // MVR500 window open and delay ok  00 10 11 11 - 00 00 00 10 10 = delay ok
         // MVR500 window close and delay ok 00 01 11 10 - 00 00 00 10 10 = delay ok
         // MVR500 window open and pause     00 00 11 11 - 00 00 00 10
         // MVR500 send open or close the answerbuf take ******* - 00 00 00 11 busy
         // MVR500 after pair send status when window open 00 00 11 10 - 00 00 00 10
-
-        if (firstPayloadStatus == UNDEFINED) {
-            firstPayloadStatus =
-                (answerBuf[1] == 1 || answerBuf[0] == 0x2f) ? ON : OFF;
+        // Seems there is various way of devices answering different ways. Trying to cover all.
+        // Devices answering 00 00 gives the same answer when closed or paused.
+        // In such case home assistant will block the close command
+        // Testing if a pause command was issued could be a possibility.
+        if ( device->getMode() == SHUTTER ) {
+            if ( ((answerBuf[0] & 0x21) == 0x21 && answerBuf[1] == 0x02) || (answerBuf[0] == 0x01 && answerBuf[1] == 0x00) ) {
+                firstPayloadStatus = SHUTTER_OPENED;
+                LOG.println("Opened");
+            } else if ( ((answerBuf[0] & 0x11) == 0x10 && answerBuf[1] == 0x02) || (answerBuf[0] == 0x00 && answerBuf[1] == 0x00) ) {
+                firstPayloadStatus = SHUTTER_CLOSED;
+                LOG.println("Closed");
+            } else if ( ((answerBuf[0] & 0x01) == 0x01 && answerBuf[1] == 0x03) || (answerBuf[0] == 0x01 && answerBuf[1] == 0x01) ) {
+                firstPayloadStatus = SHUTTER_OPENING;
+                LOG.println("Opening");
+            } else if (((answerBuf[0] & 0x01) == 0x00 && answerBuf[1] == 0x03) || (answerBuf[0] == 0x00 && answerBuf[1] == 0x01) ) {
+                firstPayloadStatus = SHUTTER_CLOSING;
+                LOG.println("Closing");
+            } else if (answerBuf[1] == 0x02) {  // To be tested last
+                firstPayloadStatus = SHUTTER_STOPPED;
+                LOG.println("Stopped");
+            }
         } else {
-            secondPayloadStatus =
-                (answerBuf[1] == 1 || answerBuf[0] == 0x2f) ? ON : OFF;
+            if (firstPayloadStatus == UNDEFINED) {
+                if (answerBuf[1] == 1 || answerBuf[0] == 0x2f) {
+                    firstPayloadStatus = ON;
+                    LOG.println("On");
+                } else {
+                    firstPayloadStatus = OFF;
+                    LOG.println("Off");
+                }
+            } else {
+                if (answerBuf[1] == 1 || answerBuf[0] == 0x2f) {
+                    firstPayloadStatus = ON;
+                    LOG.println("On");
+                } else {
+                    firstPayloadStatus = OFF;
+                    LOG.println("Off");
+                }
+            }
         }
     }
 

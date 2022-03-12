@@ -194,7 +194,7 @@ void pollForStatus(Device* d) {
     IrqManager::irqType = E2BP;
     g_bp->setDevice(d);
     DeviceStatus ds = g_bp->pollForStatus();
-
+    
     if (ds != UNDEFINED) {  // device reachable
         if (d->getFailedPollings() > 0) {
             LOG.print("Device ");
