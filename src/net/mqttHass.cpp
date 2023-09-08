@@ -31,7 +31,7 @@ char* MqttHass::newMessageJson(const Device* device, char* buf) {
     if (device->getMode() == DIMMER) {
         sprintf(buf,
                 "{"
-                "\"name\":\"%s dimmer\","
+                "\"name\":\"dimmer\","
                 "\"optimistic\":\"false\","  // if false, cannot know the status
                                              // of the device
                 "\"on_command_type\":\"brightness\","  // only send brightness
@@ -55,12 +55,12 @@ char* MqttHass::newMessageJson(const Device* device, char* buf) {
                 "},"
                 "\"~\":\"%s/\""
                 "}",
-                device->getName(), device->getName(), device->getName(),
+                device->getName(), device->getName(),
                 device->getName(), device->getName());
     } else {
         sprintf(buf,
                 "{"
-                "\"name\":\"%s switch\","
+                "\"name\":\"switch\","
                 "\"optimistic\":\"false\","  // if false, cannot know the status
                                              // of the device
                 "\"cmd_t\":\"~cmnd/POWER\","
@@ -80,7 +80,7 @@ char* MqttHass::newMessageJson(const Device* device, char* buf) {
                 "},"
                 "\"~\":\"%s/\""
                 "}",
-                device->getName(), device->getName(), device->getName(),
+                device->getName(), device->getName(),
                 device->getName(), device->getName());
     }
 
