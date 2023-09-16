@@ -31,7 +31,7 @@ char* MqttHass::newMessageJson(const Device* device, char* buf) {
     if (device->getMode() == DIMMER) {
         sprintf(buf,
                 "{"
-                "\"name\":\"%s dimmer\","
+                "\"name\":\"Dimmer\","
                 "\"optimistic\":\"false\","  // if false, cannot know the status
                                              // of the device
                 "\"on_command_type\":\"brightness\","  // only send brightness
@@ -48,19 +48,19 @@ char* MqttHass::newMessageJson(const Device* device, char* buf) {
                 "\"pl_not_avail\":\"Offline\","
                 "\"uniq_id\":\"esp-%s\","
                 "\"device\":{"
-                "\"name\":\"%s\","
-                "\"identifiers\":[\"esp-%s\"],"
-                "\"model\":\"MTV500ERX\","
-                "\"mf\":\"Yokis\""
+                  "\"name\":\"%s\","
+                  "\"identifiers\":[\"yokis-%s\"],"
+                  "\"model\":\"MTV500ERX\","
+                  "\"mf\":\"Yokis\""
                 "},"
                 "\"~\":\"%s/\""
                 "}",
-                device->getName(), device->getName(), device->getName(),
+                device->getName(), device->getName(),
                 device->getName(), device->getName());
     } else {
         sprintf(buf,
                 "{"
-                "\"name\":\"%s switch\","
+                "\"name\":\"Switch\","
                 "\"optimistic\":\"false\","  // if false, cannot know the status
                                              // of the device
                 "\"cmd_t\":\"~cmnd/POWER\","
@@ -73,14 +73,14 @@ char* MqttHass::newMessageJson(const Device* device, char* buf) {
                 "\"pl_not_avail\":\"Offline\","
                 "\"uniq_id\":\"esp-%s\","
                 "\"device\":{"
-                "\"name\":\"%s\","
-                "\"identifiers\":[\"esp-%s\"],"
-                "\"model\":\"MTR2000ERX\","
-                "\"mf\":\"Yokis\""
+                  "\"name\":\"%s\","
+                  "\"identifiers\":[\"yokis-%s\"],"
+                  "\"model\":\"MTR2000ERX\","
+                  "\"mf\":\"Yokis\""
                 "},"
                 "\"~\":\"%s/\""
                 "}",
-                device->getName(), device->getName(), device->getName(),
+                device->getName(), device->getName(),
                 device->getName(), device->getName());
     }
 
