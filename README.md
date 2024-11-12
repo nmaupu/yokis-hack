@@ -24,7 +24,7 @@ The following Yokis devices are supported:
 - MTR2000ER(P)
 - MTR2000MR(P)
 - MVR500ER
-
+- MTV300MRP
 
 
 ## Upgrading
