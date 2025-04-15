@@ -10,8 +10,8 @@ WebServer::WebServer(uint16_t port) : AsyncWebServer(port) {
     this->on("/save_config", HTTP_GET, [](AsyncWebServerRequest* request) {
         // Getting wifi configuration
         #ifndef WIFI_SSID
-        AsyncWebParameter* ssid = nullptr;
-        AsyncWebParameter* password = nullptr;
+        const AsyncWebParameter* ssid = nullptr;
+        const AsyncWebParameter* password = nullptr;
         if(request->hasParam("wifi_ssid")) {
             ssid = request->getParam("wifi_ssid");
         }
@@ -25,7 +25,7 @@ WebServer::WebServer(uint16_t port) : AsyncWebServer(port) {
 
         #if defined(MQTT_ENABLED) && !defined(MQTT_IP)
         // Getting MQTT configuration
-        AsyncWebParameter* mqttParam = nullptr;
+        const AsyncWebParameter* mqttParam = nullptr;
         bool mqttChange = false;
         String c_host;
         uint16_t c_port = MQTT_DEFAULT_PORT;
