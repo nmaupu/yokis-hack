@@ -409,10 +409,10 @@ bool E2bp::runMainLoop() {
 
         if (firstPayloadStatus == UNDEFINED) {
             firstPayloadStatus =
-                (answerBuf[1] == 1 || answerBuf[0] == 0x2f) ? ON : OFF;
+                (answerBuf[1] % 2 == 1 || answerBuf[0] == 0x2f) ? ON : OFF;
         } else {
             secondPayloadStatus =
-                (answerBuf[1] == 1 || answerBuf[0] == 0x2f) ? ON : OFF;
+                (answerBuf[1] % 2 == 1 || answerBuf[0] == 0x2f) ? ON : OFF;
         }
     }
 
