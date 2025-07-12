@@ -61,7 +61,7 @@ void Pairing::setupRFModule() {
 }
 
 #if defined(ESP8266)
-ICACHE_RAM_ATTR
+IRAM_ATTR
 #endif
 void Pairing::prepareForReading(uint8_t payloadSize) {
     setPayloadSize(payloadSize);
@@ -70,14 +70,14 @@ void Pairing::prepareForReading(uint8_t payloadSize) {
 }
 
 #if defined(ESP8266)
-ICACHE_RAM_ATTR
+IRAM_ATTR
 #endif
 void Pairing::interruptTxOk() {
     LOG.println("TX sent interrupt");
 }
 
 #if defined(ESP8266)
-ICACHE_RAM_ATTR
+IRAM_ATTR
 #endif
 void Pairing::interruptRxReady() {
     // LOG.println("Pairing RX received");
@@ -100,14 +100,14 @@ void Pairing::interruptRxReady() {
 }
 
 #if defined(ESP8266)
-ICACHE_RAM_ATTR
+IRAM_ATTR
 #endif
 void Pairing::interruptTxFailed() {
     //LOG.println("TX sent failed interrupt");
 }
 
 #if defined(ESP8266)
-ICACHE_RAM_ATTR
+IRAM_ATTR
 #endif
 void Pairing::_debugPrintRecv(byte* recvBuf, uint8_t s) {
     if (!FLAG_IS_ENABLED(FLAG_DEBUG)) return;

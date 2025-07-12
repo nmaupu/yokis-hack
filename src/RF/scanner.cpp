@@ -22,7 +22,7 @@ void Scanner::setupRFModule() {
 }
 
 #if defined(ESP8266)
-ICACHE_RAM_ATTR
+IRAM_ATTR
 #endif
 void Scanner::interruptRxReady() {
     if (available()) {
@@ -37,11 +37,11 @@ void Scanner::interruptRxReady() {
 }
 
 #if defined(ESP8266)
-ICACHE_RAM_ATTR
+IRAM_ATTR
 #endif
 void Scanner::interruptTxOk() {}
 
 #if defined(ESP8266)
-ICACHE_RAM_ATTR
+IRAM_ATTR
 #endif
 void Scanner::interruptTxFailed() {}

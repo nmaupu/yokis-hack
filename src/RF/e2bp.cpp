@@ -447,7 +447,7 @@ void E2bp::setupPayload(const uint8_t* payload) {
 }
 
 #if defined(ESP8266)
-ICACHE_RAM_ATTR
+IRAM_ATTR
 #endif
 void E2bp::stopMainLoop() {
     loopContinue = false;
@@ -455,7 +455,7 @@ void E2bp::stopMainLoop() {
 }
 
 #if defined(ESP8266)
-ICACHE_RAM_ATTR
+IRAM_ATTR
 #endif
 void E2bp::interruptTxOk() {
     if (IS_DEBUG_ENABLED) {
@@ -467,7 +467,7 @@ void E2bp::interruptTxOk() {
 }
 
 #if defined(ESP8266)
-ICACHE_RAM_ATTR
+IRAM_ATTR
 #endif
 void E2bp::interruptRxReady() {
     if (IS_DEBUG_ENABLED) {
@@ -478,7 +478,7 @@ void E2bp::interruptRxReady() {
 }
 
 #if defined(ESP8266)
-ICACHE_RAM_ATTR
+IRAM_ATTR
 #endif
 void E2bp::interruptTxFailed() {
     // Ignore

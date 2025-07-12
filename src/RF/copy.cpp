@@ -60,19 +60,19 @@ bool Copy::send() {
 }
 
 #if defined(ESP8266)
-ICACHE_RAM_ATTR
+IRAM_ATTR
 #endif
 void Copy::interruptRxReady() {
     // Nothing will be received
 }
 
 #if defined(ESP8266)
-ICACHE_RAM_ATTR
+IRAM_ATTR
 #endif
 void Copy::interruptTxOk() { isFailed = false; }
 
 #if defined(ESP8266)
-ICACHE_RAM_ATTR
+IRAM_ATTR
 #endif
 void Copy::interruptTxFailed() {
     isFailed = true;

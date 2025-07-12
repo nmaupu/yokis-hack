@@ -3,11 +3,11 @@
 #include "globals.h"
 
 // Needed to compile on ESP8266 platform
-// To use interrupt, we have to use ICACHE_RAM_ATTR to store the function in the
+// To use interrupt, we have to use IRAM_ATTR to store the function in the
 // RAM See
 // https://stackoverflow.com/questions/58113937/esp8266-arduino-why-is-it-necessary-to-add-the-icache-ram-attr-macro-to-isrs-an
 #if defined(ESP8266)
-ICACHE_RAM_ATTR
+IRAM_ATTR
 #endif
 // Process IRQ - function has to be static for Arduino's attachInterrupt
 // I never find another way of doing this than by using IRQ pin :/
