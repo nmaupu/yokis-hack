@@ -97,6 +97,8 @@ const char* Device::getModeAsString(DeviceMode mode) {
             return "ON_OFF";
         case SHUTTER:
            return "SHUTTER";
+        case SHUTTER_BUS:
+           return "SHUTTER_BUS";
         case NO_RCPT:
             return "NO_RCP";
     }
@@ -167,6 +169,8 @@ void Device::setMode(const char* mode) {
         this->setMode(DIMMER);
     } else if (strcmp("SHUTTER", mode) == 0) {
         this->setMode(SHUTTER);
+    } else if (strcmp("SHUTTER_BUS", mode) ==0) {
+        this->setMode(SHUTTER_BUS);
     } else if (strcmp("NO_RCPT", mode) == 0) {
         this->setMode(NO_RCPT);
     } else {

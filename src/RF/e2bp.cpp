@@ -43,7 +43,7 @@ bool E2bp::setDeviceStatus(DeviceStatus ds) {
     reset();
     setupRFModule();
     // For all devices, use the on or off payload except for shutters
-    if(device->getMode() == SHUTTER && ds == PAUSE_SHUTTER) {
+    if((device->getMode() == SHUTTER || device->getMode() == SHUTTER_BUS) && ds == PAUSE_SHUTTER) {
         getPayload(buf, PL_SHUTTERPAUSE);
     } else {
         getPayload(buf, ds == ON ? PL_ON : PL_OFF);
@@ -193,6 +193,7 @@ DeviceMode E2bp::getDeviceModeFromRecvData() {
         case 0x1e:
         case 0x2f:
             return SHUTTER;
+        // TODO: What's the code for SHUTTER_BUS?
         default:
             return NO_RCPT;
     }
@@ -269,7 +270,18 @@ bool E2bp::pressAndHoldFor(unsigned long duration) {
 // Fill a given buffer with the correct payload and return a pointer to it
 uint8_t* E2bp::getPayload(uint8_t* buf, PayloadType type) {
     buf[0] = 0x00;
-    buf[1] = device->getMode() == SHUTTER ? 0x16 : 0x04;
+
+    switch (device->getMode()){
+        case SHUTTER:
+            buf[1] = 0x06;
+            break;
+        case SHUTTER_BUS:
+            buf[1] = 0x16;
+            break;
+        default:
+            buf[1] = 0x04;
+    }
+
     buf[2] = 0x00;
     buf[3] = 0x20;
     buf[4] = device->getHardwareAddress()[0];
@@ -291,7 +303,14 @@ uint8_t* E2bp::getPayload(uint8_t* buf, PayloadType type) {
             buf[0] = YOKIS_CMD_ON;
             break;
         case PL_OFF:
-            buf[0] = device->getMode() == SHUTTER ? YOKIS_CMD_OFF_SHUTTER : YOKIS_CMD_OFF;
+            switch(device->getMode()) {
+                case SHUTTER:
+                case SHUTTER_BUS:
+                    buf[0] = YOKIS_CMD_OFF_SHUTTER;
+                    break;
+                default:
+                    buf[0] = YOKIS_CMD_OFF;
+            }
             break;
         case PL_STATUS:
             buf[0] = 0;

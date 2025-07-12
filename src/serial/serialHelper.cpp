@@ -72,10 +72,12 @@ void SerialHelper::readFromSerial(void) {
             char extractedCommand[32];
             extractCommand(extractedCommand);
 
-            bool found = executeCallback(extractedCommand);
-            if (!found) {
-                sprintf(buf, "%s: command not found", extractedCommand);
-                LOG.println(buf);
+            if (strcmp("", extractedCommand) != 0) {
+                bool found = executeCallback(extractedCommand);
+                if (!found) {
+                    sprintf(buf, "%s: command not found", extractedCommand);
+                    LOG.println(buf);
+                }
             }
 
             LOG.println();

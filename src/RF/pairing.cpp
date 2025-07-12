@@ -36,11 +36,11 @@ bool Pairing::hackPairing() {
     LOG.print("Waiting... timeout=");
     LOG.println(HACK_TIMEOUT);
 
-    while (millis() < timeout && readsCount < 2) {
+    while (millis() < timeout && this->readsCount < 2) {
         delay(10);
     }
 
-    if (readsCount >= 2) {
+    if (this->readsCount >= 2) {
         printPairingInfo();
         return true;
     }
@@ -82,7 +82,7 @@ ICACHE_RAM_ATTR
 void Pairing::interruptRxReady() {
     // LOG.println("Pairing RX received");
     if (available()) {
-        readsCount++;
+        this->readsCount++;
         read(recvBufferAddr, getPayloadSize());
         _debugPrintRecv(recvBufferAddr, getPayloadSize());
 
