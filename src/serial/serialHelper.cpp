@@ -32,7 +32,7 @@ bool SerialHelper::registerCallback(SerialCallback* callback) {
 }
 
 void SerialHelper::readFromSerial(void) {
-    char buf[256];
+    char buf[MAX_COMMAND_FULL_LENGTH];
     char currentChar;
 
     if(currentCommandIdx >= MAX_COMMAND_FULL_LENGTH) {

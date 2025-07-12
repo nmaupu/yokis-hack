@@ -380,6 +380,8 @@ bool storeConfigCallback(const char* params) {
     // reset default name
     g_currentDevice->setName(CURRENT_DEVICE_DEFAULT_NAME);
 
+    reloadConfig(params);
+
     delete[] paramsBak;
     return ret;
 }

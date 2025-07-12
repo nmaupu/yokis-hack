@@ -24,6 +24,7 @@ bool Pairing::hackPairing() {
 
     if (!FLAG_IS_ENABLED(FLAG_RAW) || FLAG_IS_ENABLED(FLAG_DEBUG)) {
         LOG.println("Hack started, click on the connect button when ready");
+        LOG.flush();
     }
 
     begin();
@@ -35,6 +36,7 @@ bool Pairing::hackPairing() {
 
     LOG.print("Waiting... timeout=");
     LOG.println(HACK_TIMEOUT);
+    LOG.flush();
 
     while (millis() < timeout && this->readsCount < 2) {
         delay(10);
@@ -46,6 +48,7 @@ bool Pairing::hackPairing() {
     }
 
     LOG.println("Timeout waiting for data, aborting.");
+    LOG.flush();
     return false;
 }
 

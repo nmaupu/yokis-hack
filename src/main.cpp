@@ -45,9 +45,15 @@ Device* g_devices[MQTT_MAX_NUM_OF_YOKIS_DEVICES];
 //
 #ifdef ESP8266
 
+#ifdef WIFI_ENABLED
 WebServer webserver(80);
+#endif
+
 Ticker* g_deviceStatusPollers[MQTT_MAX_NUM_OF_YOKIS_DEVICES];
+
+#ifdef WIFI_ENABLED
 WiFiClient espClient;
+#endif
 
 // polling
 void pollForStatus(Device* device);
