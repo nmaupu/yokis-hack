@@ -75,31 +75,40 @@ void registerAllCallbacks() {
         "dRestore",
         "restore a previously saved raw config line (SPIFFS->LittleFS)",
         restoreConfig));
+    #ifdef WIFI_ENABLED
     g_serial->registerCallback(
         new GenericCallback("wifiConfig",
                             "Configure wifi with parameters: ssid psk (does "
                             "not work for psk containing spaces)",
                             wifiConfig));
+    g_serial->registerCallback(
+        new GenericCallback("wifiReconnect",
+                            "Attempt to reconnect wifi with current config",
+                            wifiReconnect));
     g_serial->registerCallback(new GenericCallback(
         "wifiDiag", "Display wifi configuration debug info", wifiDiag));
     g_serial->registerCallback(new GenericCallback(
         "wifiReset", "Reset wifi configuration and setup AP mode",
         resetWifiConfigCallback));
+
+    #ifdef MQTT_ENABLED
+        g_serial->registerCallback(
+            new GenericCallback("mqttConfig",
+                                "Configure MQTT options (format: mqttConfig host "
+                                "port username password)",
+                                mqttConfig));
+        g_serial->registerCallback(new GenericCallback(
+            "mqttDiag", "Display current MQTT configuration", mqttDiag));
+        g_serial->registerCallback(new GenericCallback(
+            "mqttConfigDelete", "Delete current MQTT configuration",
+            mqttConfigDelete));
+    #endif // MQTT_ENABLED
+    #endif // WIFI_ENABLED
+
     g_serial->registerCallback(
         new GenericCallback("restart", "Restart the ESP8266 board", restart));
-
-#ifdef MQTT_ENABLED
     g_serial->registerCallback(
-        new GenericCallback("mqttConfig",
-                            "Configure MQTT options (format: mqttConfig host "
-                            "port username password)",
-                            mqttConfig));
-    g_serial->registerCallback(new GenericCallback(
-        "mqttDiag", "Display current MQTT configuration", mqttDiag));
-    g_serial->registerCallback(new GenericCallback(
-        "mqttConfigDelete", "Delete current MQTT configuration",
-        mqttConfigDelete));
-#endif // MQTT_ENABLED
+        new GenericCallback("reboot", "Restart the ESP8266 board", restart));
 
 #endif // ESP8266
 }
@@ -447,8 +456,7 @@ void pollDevice(Device* d) {
 }
 
 bool resetWifiConfigCallback(const char* params) {
-    resetWifiConfig();
-    return restart(NULL);
+    return resetWifiConfig();
 }
 
 bool wifiConfig(const char* params) {
@@ -470,8 +478,14 @@ bool wifiConfig(const char* params) {
     return true;
 }
 
+bool wifiReconnect(const char* params) {
+    reconnectWifi();
+    return true;
+}
+
 bool wifiDiag(const char* params) {
     WiFi.printDiag(LOG);
+
     LOG.print("Yokis-Hack IP: ");
     if (WiFi.getMode() == WIFI_AP) {
         LOG.println(WiFi.softAPIP());

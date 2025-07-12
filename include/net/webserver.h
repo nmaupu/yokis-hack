@@ -1,3 +1,4 @@
+#ifdef WIFI_ENABLED
 #ifdef ESP8266
 #ifndef __WEBSERVER_H__
 #define __WEBSERVER_H__
@@ -133,3 +134,4 @@ class WebServer : public AsyncWebServer {
 
 #endif  // __WEBSERVER_H__
 #endif  // ESP8266
+#endif  // WIFI_ENABLED

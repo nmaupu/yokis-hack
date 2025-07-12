@@ -1,3 +1,4 @@
+#ifdef WIFI_ENABLED
 #ifdef ESP8266
 #include "net/mqtt.h"
 #include <Arduino.h>
@@ -145,4 +146,5 @@ void Mqtt::callback(char* topic, uint8_t* payload, unsigned int length) {
     LOG.println("-----------------------");
 }
 
+#endif
 #endif

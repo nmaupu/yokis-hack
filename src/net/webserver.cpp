@@ -1,3 +1,4 @@
+#ifdef WIFI_ENABLED
 #ifdef ESP8266
 #include "net/webserver.h"
 #include "globals.h"
@@ -121,3 +122,4 @@ String WebServer::processor(const String& var) {
 }
 
 #endif // ESP8266
+#endif // WIFI_ENABLED

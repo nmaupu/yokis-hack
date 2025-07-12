@@ -1,3 +1,4 @@
+#ifdef WIFI_ENABLED
 #ifdef ESP8266
 #ifndef __MQTT_H__
 #define __MQTT_H__
@@ -30,5 +31,6 @@ class Mqtt : public PubSubClient, public MqttConfig {
     boolean loop();
 };
 
+#endif
 #endif
 #endif

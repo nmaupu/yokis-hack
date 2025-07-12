@@ -1,3 +1,4 @@
+#ifdef WIFI_ENABLED
 #ifdef ESP8266
 #ifndef __MQTT_CONFIG_H__
 #define __MQTT_CONFIG_H__
@@ -46,3 +47,4 @@ class MqttConfig {
 
 #endif  // __MQTT_CONFIG_H__
 #endif  // ESP8266
+#endif  // WIFI_ENABLED

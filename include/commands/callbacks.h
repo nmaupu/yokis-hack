@@ -54,6 +54,7 @@ bool reloadConfig(const char*);
 bool deleteFromConfig(const char*);
 bool resetWifiConfigCallback(const char*);
 bool wifiConfig(const char*);
+bool wifiReconnect(const char*);
 bool wifiDiag(const char*);
 bool restart(const char*);
 
