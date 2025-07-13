@@ -1,5 +1,4 @@
-#ifdef WIFI_ENABLED
-#ifdef ESP8266
+#if WIFI_ENABLED && defined(ESP8266) && MQTT_ENABLED
 #include "net/mqttConfig.h"
 #include "globals.h"
 
@@ -143,5 +142,4 @@ bool MqttConfig::deleteConfigFromLittleFS() {
     YokisLittleFS::init();
     return LittleFS.remove(MQTT_CONFIG_FILE_NAME);
 }
-#endif // ESP8266
-#endif // WIFI_ENABLED
+#endif

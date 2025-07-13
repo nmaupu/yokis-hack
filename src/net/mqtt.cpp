@@ -1,5 +1,4 @@
-#ifdef WIFI_ENABLED
-#ifdef ESP8266
+#if WIFI_ENABLED && defined(ESP8266) && MQTT_ENABLED
 #include "net/mqtt.h"
 #include <Arduino.h>
 #include "globals.h"
@@ -7,7 +6,7 @@
 Mqtt::Mqtt(WiFiClient& wifiClient) : PubSubClient(wifiClient), MqttConfig() {
     // Init subscriptions to NULL
     subscribedTopicIdx = 0;
-    for (uint8_t i = 0; i < MQTT_MAX_NUM_OF_YOKIS_DEVICES; i++) {
+    for (uint8_t i = 0; i < MAX_YOKIS_DEVICES_NUM; i++) {
         subscribedTopics[i] = NULL;
     }
 }
@@ -18,7 +17,7 @@ Mqtt::Mqtt(WiFiClient& wifiClient, MqttConfig& mqttConfig)
 
     // Init subscriptions to NULL
     subscribedTopicIdx = 0;
-    for (uint8_t i = 0; i < MQTT_MAX_NUM_OF_YOKIS_DEVICES; i++) {
+    for (uint8_t i = 0; i < MAX_YOKIS_DEVICES_NUM; i++) {
         subscribedTopics[i] = NULL;
     }
 }
@@ -52,7 +51,7 @@ void Mqtt::setConnectionInfo(const char* host, uint16_t port, const char* userna
 boolean Mqtt::subscribe(const char* topic) {
     LOG.print("Subscribing to topic: ");
     LOG.println(topic);
-    if (subscribedTopicIdx >= MQTT_MAX_NUM_OF_YOKIS_DEVICES) return false;
+    if (subscribedTopicIdx >= MAX_YOKIS_DEVICES_NUM) return false;
 
     subscribedTopics[subscribedTopicIdx] = (char*)malloc(strlen(topic)+1);
     strlcpy(subscribedTopics[subscribedTopicIdx], topic, strlen(topic)+1);
@@ -70,7 +69,7 @@ void Mqtt::resubscribe() {
 }
 
 void Mqtt::clearSubscriptions() {
-    for (uint8_t i = 0; i < MQTT_MAX_NUM_OF_YOKIS_DEVICES; i++) {
+    for (uint8_t i = 0; i < MAX_YOKIS_DEVICES_NUM; i++) {
         if (subscribedTopics[i] != NULL) {
             LOG.println(subscribedTopics[i]);
             free(subscribedTopics[i]);
@@ -146,5 +145,4 @@ void Mqtt::callback(char* topic, uint8_t* payload, unsigned int length) {
     LOG.println("-----------------------");
 }
 
-#endif
 #endif

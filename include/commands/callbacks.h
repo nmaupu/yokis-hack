@@ -58,7 +58,7 @@ bool wifiReconnect(const char*);
 bool wifiDiag(const char*);
 bool restart(const char*);
 
-#if defined(MQTT_ENABLED)
+#if MQTT_ENABLED
 bool mqttConfig(const char*);
 bool mqttDiag(const char*);
 bool mqttConfigDelete(const char*);

@@ -1,5 +1,4 @@
-#ifdef WIFI_ENABLED
-#ifdef ESP8266
+#if WIFI_ENABLED && defined(ESP8266) && WEBSERVER_ENABLED
 #ifndef __WEBSERVER_H__
 #define __WEBSERVER_H__
 
@@ -125,13 +124,10 @@ const char html_config_form[] PROGMEM = R"rawliteral(
 
 class WebServer : public AsyncWebServer {
    public:
-    String StatusMessage;
-
-    WebServer(uint16_t port);
-    ~WebServer();
-    static String processor(const String& var);
+     WebServer(uint16_t port);
+     ~WebServer();
+     static String processor(const String& var);
 };
 
 #endif  // __WEBSERVER_H__
-#endif  // ESP8266
-#endif  // WIFI_ENABLED
+#endif  // WIFI_ENABLED && ESP8266 && WEBSERVER_ENABLED

@@ -1,5 +1,4 @@
-#ifdef WIFI_ENABLED
-#ifdef ESP8266
+#if WIFI_ENABLED && defined(ESP8266)
 #include "net/wifi.h"
 #include "globals.h"
 
@@ -100,5 +99,4 @@ bool resetWifiConfig() {
     return WiFi.status() == WL_DISCONNECTED && WiFi.SSID().isEmpty();
 }
 
-#endif
 #endif

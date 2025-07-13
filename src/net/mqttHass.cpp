@@ -1,5 +1,4 @@
-#ifdef WIFI_ENABLED
-#ifdef ESP8266
+#if WIFI_ENABLED && defined(ESP8266) && MQTT_ENABLED
 #include "net/mqttHass.h"
 #include "RF/device.h"
 #include "globals.h"
@@ -172,5 +171,4 @@ void MqttHass::subscribeDevice(const Device* device) {
         this->subscribe(buf);
     }
 }
-#endif
 #endif

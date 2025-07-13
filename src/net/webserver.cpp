@@ -1,5 +1,4 @@
-#ifdef WIFI_ENABLED
-#ifdef ESP8266
+#if WIFI_ENABLED && defined(ESP8266) && WEBSERVER_ENABLED
 #include "net/webserver.h"
 #include "globals.h"
 
@@ -24,7 +23,7 @@ WebServer::WebServer(uint16_t port) : AsyncWebServer(port) {
         }
         #endif // WIFI_SSID
 
-        #if defined(MQTT_ENABLED) && !defined(MQTT_IP)
+        #if MQTT_ENABLED && !defined(MQTT_IP)
         // Getting MQTT configuration
         const AsyncWebParameter* mqttParam = nullptr;
         bool mqttChange = false;
@@ -70,7 +69,7 @@ WebServer::WebServer(uint16_t port) : AsyncWebServer(port) {
             g_mqtt->setConnectionInfo(c_host.c_str(), c_port, c_username.c_str(), c_password.c_str());
         }
 
-        #endif  // #if defined(MQTT_ENABLED) && !defined(MQTT_IP)
+        #endif  // #if MQTT_ENABLED && !defined(MQTT_IP)
 
         request->redirect("/?message=Configuration saved successfully");
     });
@@ -89,9 +88,9 @@ String WebServer::processor(const String& var) {
     }
 
     if (var == "MQTT_SECTION_ENABLED") {
-        #if !defined(MQTT_ENABLED) || defined(MQTT_IP)
+        #if !MQTT_ENABLED || defined(MQTT_IP)
             return "disabled=\"\"";
-        #elif !defined(MQTT_ENABLED)
+        #elif !MQTT_ENABLED
             return "disabled=\"\"";
         #else
             return "";
@@ -104,7 +103,7 @@ String WebServer::processor(const String& var) {
     if (var == "WIFI_PASSWORD")
         return WiFi.psk();
 
-    #ifdef MQTT_ENABLED
+    #if MQTT_ENABLED
     if (var == "MQTT_IP")
         return g_mqtt->getHost();
 
@@ -121,5 +120,4 @@ String WebServer::processor(const String& var) {
     return String();
 }
 
-#endif // ESP8266
-#endif // WIFI_ENABLED
+#endif  // WIFI_ENABLED && ESP8266 && WEBSERVER_ENABLED

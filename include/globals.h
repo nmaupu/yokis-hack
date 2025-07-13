@@ -1,73 +1,30 @@
 #ifndef __GLOBALS_H__
 #define __GLOBALS_H__
 
+#if (MQTT_ENABLED || WEBSERVER_ENABLED) && !WIFI_ENABLED
+#error "WIFI_ENABLED must be activated to activate either MQTT_ENABLED or WEBERSERVER_ENABLED"
+#endif
+
 #include <Arduino.h>
 
 #ifdef ESP8266
 #include <Ticker.h>
 #endif  // ESP8266
 
+#include "constants.h"
+
 #include "RF/copy.h"
 #include "RF/e2bp.h"
 #include "RF/pairing.h"
 #include "RF/scanner.h"
 #include "serial/serialHelper.h"
-#if defined(ESP8266) && defined(MQTT_ENABLED)
+#if defined(ESP8266) && MQTT_ENABLED
 #include "net/mqttHass.h"
 #endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-// CE  active low controls when chips actually executes stuff (sends a payload
-// for instance)
-// CSN active low controls when commands are sent to the chip (write register,
-// etc.)
-// Interrupt pin from the NRF chip
-#ifdef ESP8266
-
-#define CE_PIN D2
-#define CSN_PIN D8
-#define IRQ_PIN D1
-
-// status led to turn off
-#define STATUS_LED D4
-
-#else
-
-// Arduino
-#define CE_PIN 7
-#define CSN_PIN 8
-#define IRQ_PIN 20
-
-#endif // ESP8266
-
-
-#define CURRENT_DEVICE_DEFAULT_NAME "tempDevice"
-
-// Define program title
-#define PROG_TITLE_FORMAT "-== Yokis hacks v. %s ==-"
-#ifndef PROG_VERSION
-#define PROG_VERSION "dev"
-#endif // PROG_VERSION
-
-// Serial baudrate
-#define SERIAL_BAUDRATE 115200
-
-// Serial print buffer size
-#define PRINT_BUFFER_SIZE 32
-
-// Yokis commands
-#define YOKIS_CMD_BEGIN 0x35
-#define YOKIS_CMD_END 0x53
-#define YOKIS_CMD_STATUS 0x00
-#define YOKIS_CMD_ON 0xb9
-#define YOKIS_CMD_OFF 0x1a
-#define YOKIS_CMD_OFF_SHUTTER 0xfa
-#define YOKIS_CMD_SHUTTER_PAUSE 0x1a
-
-#define DEVICE_MAX_FAILED_POLLING_BEFORE_OFFLINE 3
 
 // Global config flags
 extern byte g_ConfigFlags;
@@ -80,10 +37,10 @@ extern Copy* g_copy;
 extern Device* g_currentDevice;
 
 #ifdef ESP8266
-extern Device* g_devices[MQTT_MAX_NUM_OF_YOKIS_DEVICES];
-extern Ticker* g_deviceStatusPollers[MQTT_MAX_NUM_OF_YOKIS_DEVICES];
+extern Device* g_devices[MAX_YOKIS_DEVICES_NUM];
+extern Ticker* g_deviceStatusPollers[MAX_YOKIS_DEVICES_NUM];
 
-#ifdef MQTT_ENABLED
+#if MQTT_ENABLED
 // Don't update the same device during the MQTT_UPDATE_MILLIS_WINDOW
 // time window !
 // HASS sends sometimes multiple times the same MQTT message in a row...

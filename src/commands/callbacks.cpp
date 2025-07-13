@@ -75,7 +75,7 @@ void registerAllCallbacks() {
         "dRestore",
         "restore a previously saved raw config line (SPIFFS->LittleFS)",
         restoreConfig));
-    #ifdef WIFI_ENABLED
+    #if WIFI_ENABLED
     g_serial->registerCallback(
         new GenericCallback("wifiConfig",
                             "Configure wifi with parameters: ssid psk (does "
@@ -91,7 +91,7 @@ void registerAllCallbacks() {
         "wifiReset", "Reset wifi configuration and setup AP mode",
         resetWifiConfigCallback));
 
-    #ifdef MQTT_ENABLED
+    #if MQTT_ENABLED
         g_serial->registerCallback(
             new GenericCallback("mqttConfig",
                                 "Configure MQTT options (format: mqttConfig host "
@@ -156,7 +156,7 @@ Device* getDeviceFromParams(const char* params) {
     if (pch == NULL || strcmp("", pch) == 0) {
         d = g_currentDevice;
     } else {
-        d = Device::getFromList(g_devices, MQTT_MAX_NUM_OF_YOKIS_DEVICES, pch);
+        d = Device::getFromList(g_devices, MAX_YOKIS_DEVICES_NUM, pch);
     }
 
     delete[] paramsBak;
@@ -178,7 +178,7 @@ bool changeDeviceState(const char* params, bool (E2bp::*func)(void)) {
     IrqManager::irqType = E2BP;
     g_bp->setDevice(d);
     bool ret = (g_bp->*func)();
-#if defined(ESP8266) && defined(MQTT_ENABLED)
+#if defined(ESP8266) && MQTT_ENABLED
     if (ret) {
         if (d->getMode() == DIMMER) {
             g_mqtt->notifyBrightness(d);
@@ -414,17 +414,17 @@ bool restoreConfig(const char* params) {
 }
 
 bool reloadConfig(const char*) {
-    for (uint8_t i = 0; i < MQTT_MAX_NUM_OF_YOKIS_DEVICES; i++) {
+    for (uint8_t i = 0; i < MAX_YOKIS_DEVICES_NUM; i++) {
         delete g_devices[i];  // delete previously allocated device if needed
         if (g_deviceStatusPollers[i] != NULL) g_deviceStatusPollers[i]->detach();
         delete g_deviceStatusPollers[i];
         g_devices[i] = NULL;
         g_deviceStatusPollers[i] = NULL;
     }
-    Device::loadFromLittleFS(g_devices, MQTT_MAX_NUM_OF_YOKIS_DEVICES);
+    Device::loadFromLittleFS(g_devices, MAX_YOKIS_DEVICES_NUM);
 
     // Reattach tickers to devices
-    for (uint8_t i = 0; i < MQTT_MAX_NUM_OF_YOKIS_DEVICES; i++) {
+    for (uint8_t i = 0; i < MAX_YOKIS_DEVICES_NUM; i++) {
         if (g_devices[i] != NULL) {
             g_deviceStatusPollers[i] = new Ticker();
             g_deviceStatusPollers[i]->attach_ms(random(4000, 10000), pollDevice,
@@ -457,6 +457,8 @@ void pollDevice(Device* d) {
     if (FLAG_IS_ENABLED(FLAG_POLLING)) d->pollMePlease();
 }
 
+
+#if WIFI_ENABLED
 bool resetWifiConfigCallback(const char* params) {
     return resetWifiConfig();
 }
@@ -497,13 +499,14 @@ bool wifiDiag(const char* params) {
 
     return true;
 }
+#endif // WIFI_ENABLED
 
 bool restart(const char* params) {
     ESP.restart();
     return true;
 }
 
-#if defined(MQTT_ENABLED)
+#if MQTT_ENABLED
 bool mqttConfig(const char* params) {
     char* paramsBak;
     char *host, *sport, *username, *password;
@@ -557,6 +560,6 @@ bool mqttConfigDelete(const char*) {
     LOG.println("MQTT config deleted!");
     return true;
 }
-
 #endif // MQTT_ENABLED
+
 #endif // ESP8266

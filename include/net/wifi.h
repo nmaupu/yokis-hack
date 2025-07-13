@@ -1,5 +1,4 @@
-#ifdef WIFI_ENABLED
-#ifdef ESP8266
+#if WIFI_ENABLED && defined(ESP8266)
 #ifndef __WIFI_H__
 #define __WIFI_H__
 
@@ -13,4 +12,3 @@ bool resetWifiConfig();
 
 #endif  // __WIFI_H__
 #endif  // ESP8266
-#endif  // WIFI_ENABLED

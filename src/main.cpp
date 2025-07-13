@@ -16,9 +16,19 @@
 #include <PubSubClient.h>
 #include <Ticker.h>
 #include <WiFiUdp.h>
+
+#if MQTT_ENABLED
 #include "net/mqttHass.h"
+#endif
+
+#if WIFI_ENABLED
 #include "net/wifi.h"
+#endif
+
+#if WEBSERVER_ENABLED
 #include "net/webserver.h"
+#endif
+
 #endif
 
 // static irqType initialization
@@ -34,31 +44,30 @@ Copy* g_copy;
 Device* g_currentDevice;
 
 #ifdef ESP8266
-#ifdef MQTT_ENABLED
+#if MQTT_ENABLED
 MqttHass* g_mqtt;
 #endif // MQTT_ENABLED
 TelnetSpy g_telnetAndSerial;
 // no need to store more devices than supported by MQTT
-Device* g_devices[MQTT_MAX_NUM_OF_YOKIS_DEVICES];
+Device* g_devices[MAX_YOKIS_DEVICES_NUM];
 #endif // ESP8266
 
 //
 #ifdef ESP8266
 
-#ifdef WIFI_ENABLED
+#if WIFI_ENABLED
+WiFiClient espClient;
+#endif
+#if WEBSERVER_ENABLED
 WebServer webserver(80);
 #endif
 
-Ticker* g_deviceStatusPollers[MQTT_MAX_NUM_OF_YOKIS_DEVICES];
-
-#ifdef WIFI_ENABLED
-WiFiClient espClient;
-#endif
+Ticker* g_deviceStatusPollers[MAX_YOKIS_DEVICES_NUM];
 
 // polling
 void pollForStatus(Device* device);
 
-#ifdef MQTT_ENABLED
+#if MQTT_ENABLED
 void mqttCallback(char*, uint8_t*, unsigned int);
 #endif // MQTT_ENABLED
 
@@ -85,7 +94,7 @@ void setup() {
 
     // Setting up configured wifi or AP mode
     // If compilation options are present, override any existing configuration
-    #ifdef WIFI_ENABLED
+    #if WIFI_ENABLED
         #ifdef WIFI_SSID
             String ssid = WIFI_SSID;
             String psk = "";
@@ -99,10 +108,12 @@ void setup() {
             setupWifi(); // Setup existing configuration of set AP mode for initial config
         #endif // WIFI_SSID
 
+        #if WEBSERVER_ENABLED
         // Starting webserver
         webserver.begin();
+        #endif
 
-        #if defined(MQTT_ENABLED)
+        #if MQTT_ENABLED
             g_mqtt = new MqttHass(espClient);
             g_mqtt->setCallback(mqttCallback);
         #endif
@@ -158,13 +169,13 @@ void loop() {
     LOG.handle(); // telnetspy handling
     ArduinoOTA.handle();
 
-    #if defined(MQTT_ENABLED)
+    #if MQTT_ENABLED
     g_mqtt->loop();
 
     uint8_t nbDevices = 0;
     if (g_mqtt->connected() && !g_mqtt->isDiscoveryDone()) {
         LOG.print("Publishing homeassistant discovery data... ");
-        for (uint8_t i = 0; i < MQTT_MAX_NUM_OF_YOKIS_DEVICES; i++) {
+        for (uint8_t i = 0; i < MAX_YOKIS_DEVICES_NUM; i++) {
             if (g_devices[i] != NULL) {
                 nbDevices++;
                 if (g_mqtt->publishDevice(g_devices[i])) {
@@ -183,7 +194,7 @@ void loop() {
     } else if (g_mqtt->connected() && g_mqtt->isDiscoveryDone()) {
         // Verify polling statuses and update via MQTT if needed
         for (uint8_t i = 0;
-             i < MQTT_MAX_NUM_OF_YOKIS_DEVICES && FLAG_IS_ENABLED(FLAG_POLLING);
+             i < MAX_YOKIS_DEVICES_NUM && FLAG_IS_ENABLED(FLAG_POLLING);
              i++) {
             if (g_devices[i] != NULL && g_devices[i]->needsPolling()) {
                 pollForStatus(g_devices[i]);
@@ -197,7 +208,7 @@ void loop() {
 }
 
 
-#if defined(ESP8266) && defined(MQTT_ENABLED)
+#if defined(ESP8266) && MQTT_ENABLED
 void pollForStatus(Device* d) {
     IrqManager::irqType = E2BP;
     g_bp->setDevice(d);
@@ -247,7 +258,7 @@ void pollForStatus(Device* d) {
 }
 #endif
 
-#if defined(ESP8266) && defined(MQTT_ENABLED)
+#if defined(ESP8266) && MQTT_ENABLED
 void mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
     char* tok;
     char* mTokBuf = NULL;
@@ -268,7 +279,7 @@ void mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
     strncpy(mTokBuf, mTopic, len);
     mTokBuf[len] = 0;
     tok = strtok(mTokBuf, "/");  // device name
-    d = Device::getFromList(g_devices, MQTT_MAX_NUM_OF_YOKIS_DEVICES, tok);
+    d = Device::getFromList(g_devices, MAX_YOKIS_DEVICES_NUM, tok);
 
     // If we update this device too soon, ignore the payload
     unsigned long now = millis();

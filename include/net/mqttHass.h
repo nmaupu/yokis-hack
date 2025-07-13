@@ -1,5 +1,4 @@
-#ifdef WIFI_ENABLED
-#ifdef ESP8266
+#if WIFI_ENABLED && defined(ESP8266) && MQTT_ENABLED
 #ifndef __MQTT_HASS_H__
 #define __MQTT_HASS_H__
 
@@ -37,4 +36,3 @@ class MqttHass : public Mqtt {
 
 #endif  // __MQTT_HASS_H__
 #endif  // ESP8266
-#endif  // WIFI_ENABLED
