@@ -45,32 +45,37 @@ Device* g_currentDevice;
 uint8 g_nb_devices;
 
 #ifdef ESP8266
-#if MQTT_ENABLED
-MqttHass* g_mqtt;
-#endif // MQTT_ENABLED
-TelnetSpy g_telnetAndSerial;
-// no need to store more devices than supported by MQTT
-Device* g_devices[MAX_YOKIS_DEVICES_NUM];
-#endif // ESP8266
+    #if MQTT_ENABLED
+        MqttHass* g_mqtt;
+    #endif // MQTT_ENABLED
 
-//
-#ifdef ESP8266
+    // TelnetSpy g_telnetSpy;
+    #if WEBSERVER_ENABLED
+    WebSerial g_webSerial;
+    MySerial g_mySerial(&g_webSerial);
+    #else
+    MySerial g_mySerial();
+    #endif
 
-#if WIFI_ENABLED
-WiFiClient espClient;
-#endif
-#if WEBSERVER_ENABLED
-WebServer webserver(80);
-#endif
+    // no need to store more devices than supported by MQTT
+    Device* g_devices[MAX_YOKIS_DEVICES_NUM];
 
-Ticker* g_deviceStatusPollers[MAX_YOKIS_DEVICES_NUM];
+    #if WIFI_ENABLED
+        WiFiClient espClient;
+    #endif
 
-// polling
-void pollForStatus(Device* device);
+    #if WEBSERVER_ENABLED
+        WebServer webserver(80, &g_webSerial);
+    #endif
 
-#if MQTT_ENABLED
-void mqttCallback(char*, uint8_t*, unsigned int);
-#endif // MQTT_ENABLED
+    Ticker* g_deviceStatusPollers[MAX_YOKIS_DEVICES_NUM];
+
+    // polling
+    void pollForStatus(Device* device);
+
+    #if MQTT_ENABLED
+        void mqttCallback(char*, uint8_t*, unsigned int);
+    #endif // MQTT_ENABLED
 
 #endif // ESP8266
 
@@ -160,7 +165,7 @@ void setup() {
 
     printf_begin();  // Works only for Arduino devices...
     LOG.println("Setup finished - device ready !");
-    g_serial->executeCallback("help");
+    g_serial->executeCallback("help", NULL);
     LOG.println();
     g_serial->prompt();
 }
@@ -203,6 +208,11 @@ void loop() {
 #endif // MQTT_ENABLED
 #endif // ESP8266
     g_serial->readFromSerial();
+
+    // #if WEBSERVER_ENABLED
+    // WebSerial.loop();
+    // #endif
+
     delay(1);
 }
 

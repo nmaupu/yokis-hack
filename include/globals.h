@@ -18,8 +18,13 @@
 #include "RF/pairing.h"
 #include "RF/scanner.h"
 #include "serial/serialHelper.h"
+#include "serial/mySerial.h"
 #if defined(ESP8266) && MQTT_ENABLED
 #include "net/mqttHass.h"
+#endif
+
+#if WEBSERVER_ENABLED
+#include <MycilaWebSerial.h>
 #endif
 
 #ifdef __cplusplus
@@ -41,22 +46,26 @@ extern Device* g_devices[MAX_YOKIS_DEVICES_NUM];
 extern uint8 g_nb_devices;
 extern Ticker* g_deviceStatusPollers[MAX_YOKIS_DEVICES_NUM];
 
-#if MQTT_ENABLED
-// Don't update the same device during the MQTT_UPDATE_MILLIS_WINDOW
-// time window !
-// HASS sends sometimes multiple times the same MQTT message in a row...
-// Usually 2 MQTT messages sent in a row are processed very quickly
-// something like 3 to 5 ms
-#define MQTT_UPDATE_MILLIS_WINDOW 100
-extern MqttHass* g_mqtt;
-#endif // MQTT_ENABLED
+    #if MQTT_ENABLED
+        // Don't update the same device during the MQTT_UPDATE_MILLIS_WINDOW
+        // time window !
+        // HASS sends sometimes multiple times the same MQTT message in a row...
+        // Usually 2 MQTT messages sent in a row are processed very quickly
+        // something like 3 to 5 ms
+        #define MQTT_UPDATE_MILLIS_WINDOW 100
+        extern MqttHass* g_mqtt;
+    #endif // MQTT_ENABLED
 
-// Serial configuration over telnet
-extern TelnetSpy g_telnetAndSerial;
-#define LOG g_telnetAndSerial
+    // Serial configuration over telnet
+    /* extern TelnetSpy g_telnetSpy; */
+    extern MySerial g_mySerial;
+    #if WEBSERVER_ENABLED
+        extern WebSerial g_webSerial;
+    #endif
+    #define LOG g_mySerial
 
 #else // ESP8266
-#define LOG Serial
+    #define LOG Serial
 #endif // ESP8266
 
 #define FLAG_DEBUG (1 << 0)
