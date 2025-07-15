@@ -38,6 +38,7 @@ extern Device* g_currentDevice;
 
 #ifdef ESP8266
 extern Device* g_devices[MAX_YOKIS_DEVICES_NUM];
+extern uint8 g_nb_devices;
 extern Ticker* g_deviceStatusPollers[MAX_YOKIS_DEVICES_NUM];
 
 #if MQTT_ENABLED

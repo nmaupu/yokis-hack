@@ -131,7 +131,7 @@ class Device {
     static bool storeRawConfig(const char*);
     // Load a bunch of devices from LittleFS to a previously allocated array of
     // pointers which size is passed as parameter
-    static void loadFromLittleFS(Device**, const unsigned int);
+    static int loadFromLittleFS(Device**, const unsigned int);
     // Display config file from LittleFS
     static void displayConfigFromLittleFS();
     // Clear config from LittleFS

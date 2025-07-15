@@ -40,6 +40,8 @@ void registerAllCallbacks() {
         "release", "Release an e2bp button", releaseCallback));
     g_serial->registerCallback(
         new GenericCallback("status", "Get device status", statusCallback));
+    g_serial->registerCallback(
+        new GenericCallback("statusAll", "Get status for all devices", statusAllCallback));
     g_serial->registerCallback(new GenericCallback(
         "dimmem", "Set a dimmer to memory (= 1 button pushes)",
         dimmerMemCallback));
@@ -156,7 +158,7 @@ Device* getDeviceFromParams(const char* params) {
     if (pch == NULL || strcmp("", pch) == 0) {
         d = g_currentDevice;
     } else {
-        d = Device::getFromList(g_devices, MAX_YOKIS_DEVICES_NUM, pch);
+        d = Device::getFromList(g_devices, g_nb_devices, pch);
     }
 
     delete[] paramsBak;
@@ -350,6 +352,23 @@ bool statusCallback(const char* params) {
     return true;
 }
 
+bool statusAllCallback(const char* params) {
+    Device* d;
+    IrqManager::irqType = E2BP;
+    for (uint8_t i = 0; i < g_nb_devices; i++) {
+        d = g_devices[i];
+        if (d != NULL) {
+            g_bp->setDevice(d);
+            DeviceStatus st = g_bp->pollForStatus();
+            LOG.printf("%s status = %s\n", d->getName(), Device::getStatusAsString(st));
+        }
+    }
+
+    if (g_nb_devices > 0) LOG.flush();
+
+    return true;
+}
+
 #ifdef ESP8266
 bool storeConfigCallback(const char* params) {
     char* paramsBak;
@@ -421,10 +440,10 @@ bool reloadConfig(const char*) {
         g_devices[i] = NULL;
         g_deviceStatusPollers[i] = NULL;
     }
-    Device::loadFromLittleFS(g_devices, MAX_YOKIS_DEVICES_NUM);
+    g_nb_devices = Device::loadFromLittleFS(g_devices, MAX_YOKIS_DEVICES_NUM);
 
     // Reattach tickers to devices
-    for (uint8_t i = 0; i < MAX_YOKIS_DEVICES_NUM; i++) {
+    for (uint8_t i = 0; i < g_nb_devices; i++) {
         if (g_devices[i] != NULL) {
             g_deviceStatusPollers[i] = new Ticker();
             g_deviceStatusPollers[i]->attach_ms(random(4000, 10000), pollDevice,
@@ -560,6 +579,6 @@ bool mqttConfigDelete(const char*) {
     LOG.println("MQTT config deleted!");
     return true;
 }
-#endif // MQTT_ENABLED
 
+#endif // MQTT_ENABLED
 #endif // ESP8266

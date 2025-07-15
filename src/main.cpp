@@ -42,6 +42,7 @@ E2bp* g_bp;
 Scanner* g_scanner;
 Copy* g_copy;
 Device* g_currentDevice;
+uint8 g_nb_devices;
 
 #ifdef ESP8266
 #if MQTT_ENABLED
@@ -172,12 +173,10 @@ void loop() {
     #if MQTT_ENABLED
     g_mqtt->loop();
 
-    uint8_t nbDevices = 0;
     if (g_mqtt->connected() && !g_mqtt->isDiscoveryDone()) {
         LOG.print("Publishing homeassistant discovery data... ");
-        for (uint8_t i = 0; i < MAX_YOKIS_DEVICES_NUM; i++) {
+        for (uint8_t i = 0; i < g_nb_devices; i++) {
             if (g_devices[i] != NULL) {
-                nbDevices++;
                 if (g_mqtt->publishDevice(g_devices[i])) {
                     g_mqtt->subscribeDevice(g_devices[i]);
                 } else {
@@ -187,14 +186,14 @@ void loop() {
             }
         }
 
-        if (nbDevices == 0) g_mqtt->setDiscoveryDone(true);
+        if (g_nb_devices == 0) g_mqtt->setDiscoveryDone(true);
 
         if (g_mqtt->isDiscoveryDone()) LOG.println("OK");
 
     } else if (g_mqtt->connected() && g_mqtt->isDiscoveryDone()) {
         // Verify polling statuses and update via MQTT if needed
         for (uint8_t i = 0;
-             i < MAX_YOKIS_DEVICES_NUM && FLAG_IS_ENABLED(FLAG_POLLING);
+             i < g_nb_devices && FLAG_IS_ENABLED(FLAG_POLLING);
              i++) {
             if (g_devices[i] != NULL && g_devices[i]->needsPolling()) {
                 pollForStatus(g_devices[i]);

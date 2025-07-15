@@ -36,6 +36,7 @@ bool pressCallback(const char*);
 bool pressForCallback(const char*);
 bool releaseCallback(const char*);
 bool statusCallback(const char*);
+bool statusAllCallback(const char*);
 bool dimmerMemCallback(const char*);
 bool dimmerMaxCallback(const char*);
 bool dimmerMidCallback(const char*);

@@ -363,7 +363,7 @@ void Device::deleteFromConfig(const char* deviceName) {
 }
 
 // Static - load devices previously stored in the LittleFS memory area
-void Device::loadFromLittleFS(Device** devices, const unsigned int size) {
+int Device::loadFromLittleFS(Device** devices, const unsigned int size) {
     char buf[128];
     char* tok;
     uint16_t numLines = 0;
@@ -377,7 +377,7 @@ void Device::loadFromLittleFS(Device** devices, const unsigned int size) {
     if (!f) {
         LOG.print(LITTLEFS_CONFIG_FILENAME);
         LOG.println(" - File open failed");
-        return;
+        return 0;
     }
 
     // null terminate in advance
@@ -439,6 +439,7 @@ void Device::loadFromLittleFS(Device** devices, const unsigned int size) {
     }
 
     f.close();
+    return numLines;
 }
 
 // static - display config file from LittleFS
