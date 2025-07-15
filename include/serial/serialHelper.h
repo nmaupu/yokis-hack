@@ -25,8 +25,8 @@ class SerialHelper {
     void readFromSerial();
     void usage();
     bool registerCallback(SerialCallback* callback);
-    bool executeCallback(const char*);
-    void extractCommand(char* buf);
+    bool executeCallback(const char* callback, const char* params);
+    void extractCommand(const char* cmd, char* buf);
     // Executes a command. Returns true if command is found, false otherwise
     bool commandCallback(const char*);
 

@@ -1,11 +1,36 @@
 #if WIFI_ENABLED && defined(ESP8266) && WEBSERVER_ENABLED
 #include "net/webserver.h"
+#include "serial/serialHelper.h"
 #include "globals.h"
 
-WebServer::WebServer(uint16_t port) : AsyncWebServer(port) {
+
+WebServer::WebServer(uint16_t port, WebSerial *webSerial) : AsyncWebServer(port) {
+    this->webSerial = webSerial;
+
+    // Routes
     this->on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
-        request->send_P(200, "text/html", html_config_form, processor);
+        request->send(200, "text/html", html_menu_page);
     });
+    this->on("/config", HTTP_GET, [](AsyncWebServerRequest* request) {
+        request->send(200, "text/html", html_config_form, config_processor);
+    });
+
+    //
+    this->webSerial->onMessage([&](const std::string& msg) {
+        char extractedCommand[MAX_COMMAND_LENGTH];
+        g_serial->extractCommand(msg.c_str(), extractedCommand);
+
+        if (strcmp("", extractedCommand) != 0) {
+            bool found = g_serial->executeCallback(extractedCommand, msg.c_str());
+            if (!found) {
+                LOG.printf("%s: command not found\n", extractedCommand);
+            } else {
+                LOG.printf("%s: success!\n", extractedCommand);
+            }
+        }
+    });
+
+    this->webSerial->begin(this);
 
     this->on("/save_config", HTTP_GET, [](AsyncWebServerRequest* request) {
         // Getting wifi configuration
@@ -78,7 +103,7 @@ WebServer::WebServer(uint16_t port) : AsyncWebServer(port) {
 WebServer::~WebServer() {}
 
 // static
-String WebServer::processor(const String& var) {
+String WebServer::config_processor(const String& var) {
     if (var == "WIFI_SECTION_ENABLED") {
         #ifdef WIFI_SSID
             return "disabled=\"\"";
@@ -118,6 +143,10 @@ String WebServer::processor(const String& var) {
     #endif
 
     return String();
+}
+
+WebSerial* WebServer::getWebSerial(){
+    return this->webSerial;
 }
 
 #endif  // WIFI_ENABLED && ESP8266 && WEBSERVER_ENABLED

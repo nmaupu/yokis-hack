@@ -5,7 +5,23 @@
 #include <ESP8266WiFi.h>
 #include <ESPAsyncTCP.h>
 #include <ESPAsyncWebServer.h>
+#include <MycilaWebSerial.h>
 #include "net/wifi.h"
+
+const char html_menu_page[] PROGMEM = R"rawliteral(
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Yokis-Hack configuration page</title>
+        </meta>
+    </head>
+    <body>
+      <a href="/config">Configuration</a><br/>
+      <a href="/webserial">Serial Monitor</a><br/>
+    </body>
+</html>
+)rawliteral";
 
 const char html_config_form[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
@@ -123,10 +139,13 @@ const char html_config_form[] PROGMEM = R"rawliteral(
 )rawliteral";
 
 class WebServer : public AsyncWebServer {
+   private:
+    WebSerial *webSerial;
    public:
-     WebServer(uint16_t port);
-     ~WebServer();
-     static String processor(const String& var);
+    WebServer(uint16_t port, WebSerial *webSerial);
+    ~WebServer();
+    static String config_processor(const String& var);
+    WebSerial* getWebSerial();
 };
 
 #endif  // __WEBSERVER_H__
