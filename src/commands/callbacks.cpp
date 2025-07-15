@@ -360,7 +360,10 @@ bool statusAllCallback(const char* params) {
         if (d != NULL) {
             g_bp->setDevice(d);
             DeviceStatus st = g_bp->pollForStatus();
-            LOG.printf("%s status = %s\n", d->getName(), Device::getStatusAsString(st));
+            LOG.print(d->getName());
+            LOG.print(" status = ");
+            LOG.print(Device::getStatusAsString(st));
+            LOG.println();
         }
     }
 
