@@ -69,11 +69,11 @@ void SerialHelper::readFromSerial(void) {
             LOG.println();
 
             // Looking for a command to execute
-            char extractedCommand[32];
-            extractCommand(extractedCommand);
+            char extractedCommand[MAX_COMMAND_LENGTH];
+            extractCommand(currentCommand, extractedCommand);
 
             if (strcmp("", extractedCommand) != 0) {
-                bool found = executeCallback(extractedCommand);
+                bool found = executeCallback(extractedCommand, currentCommand);
                 if (!found) {
                     sprintf(buf, "%s: command not found", extractedCommand);
                     LOG.println(buf);
@@ -87,12 +87,12 @@ void SerialHelper::readFromSerial(void) {
     } // if
 }
 
-bool SerialHelper::executeCallback(const char* cmd) {
+bool SerialHelper::executeCallback(const char* callback, const char* params) {
     bool found = false;
     for (uint8_t i = 0; i < callbacksIndex; i++) {
-        if (strcmp(cmd, callbacks[i]->getCommand()) == 0) {
+        if (strcmp(callback, callbacks[i]->getCommand()) == 0) {
             found = true;
-            callbacks[i]->commandCallback(currentCommand);
+            callbacks[i]->commandCallback(params);
             break;
         }
     }
@@ -100,10 +100,10 @@ bool SerialHelper::executeCallback(const char* cmd) {
     return found;
 }
 
-void SerialHelper::extractCommand(char* buf) {
+void SerialHelper::extractCommand(const char* cmd, char* buf) {
     uint8_t p = 0;
-    while(currentCommand[p] != ' ' && p < MAX_COMMAND_LENGTH && p < currentCommandIdx) {
-        buf[p] = currentCommand[p];
+    while(cmd[p] != ' ' && p < MAX_COMMAND_LENGTH && p < strlen(cmd)) {
+        buf[p] = cmd[p];
         p++;
     }
     buf[p] = '\0';
