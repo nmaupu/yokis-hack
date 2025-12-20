@@ -63,7 +63,7 @@ void Pairing::setupRFModule() {
     delay(5);
 }
 
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 IRAM_ATTR
 #endif
 void Pairing::prepareForReading(uint8_t payloadSize) {
@@ -72,14 +72,14 @@ void Pairing::prepareForReading(uint8_t payloadSize) {
     startListening();
 }
 
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 IRAM_ATTR
 #endif
 void Pairing::interruptTxOk() {
     LOG.println("TX sent interrupt");
 }
 
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 IRAM_ATTR
 #endif
 void Pairing::interruptRxReady() {
@@ -102,14 +102,14 @@ void Pairing::interruptRxReady() {
     }
 }
 
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 IRAM_ATTR
 #endif
 void Pairing::interruptTxFailed() {
     //LOG.println("TX sent failed interrupt");
 }
 
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 IRAM_ATTR
 #endif
 void Pairing::_debugPrintRecv(byte* recvBuf, uint8_t s) {

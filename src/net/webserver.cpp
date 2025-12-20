@@ -1,4 +1,4 @@
-#if WIFI_ENABLED && defined(ESP8266) && WEBSERVER_ENABLED
+#if WIFI_ENABLED && (defined(ESP8266) || defined(ESP32)) && WEBSERVER_ENABLED
 #include "net/webserver.h"
 #include "globals.h"
 

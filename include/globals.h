@@ -7,9 +7,9 @@
 
 #include <Arduino.h>
 
-#ifdef ESP8266
+#if defined(ESP8266) || defined(ESP32)
 #include <Ticker.h>
-#endif  // ESP8266
+#endif  // ESP8266 || ESP32
 
 #include "constants.h"
 
@@ -18,7 +18,7 @@
 #include "RF/pairing.h"
 #include "RF/scanner.h"
 #include "serial/serialHelper.h"
-#if defined(ESP8266) && MQTT_ENABLED
+#if (defined(ESP8266) || defined(ESP32)) && MQTT_ENABLED
 #include "net/mqttHass.h"
 #endif
 
@@ -36,9 +36,9 @@ extern Scanner* g_scanner;
 extern Copy* g_copy;
 extern Device* g_currentDevice;
 
-#ifdef ESP8266
+#if defined(ESP8266) || defined(ESP32)
 extern Device* g_devices[MAX_YOKIS_DEVICES_NUM];
-extern uint8 g_nb_devices;
+extern uint8_t g_nb_devices;
 extern Ticker* g_deviceStatusPollers[MAX_YOKIS_DEVICES_NUM];
 
 #if MQTT_ENABLED
@@ -55,9 +55,9 @@ extern MqttHass* g_mqtt;
 extern TelnetSpy g_telnetAndSerial;
 #define LOG g_telnetAndSerial
 
-#else // ESP8266
+#else // ESP8266 || ESP32
 #define LOG Serial
-#endif // ESP8266
+#endif // ESP8266 || ESP32
 
 #define FLAG_DEBUG (1 << 0)
 #define FLAG_RAW (1 << 1)

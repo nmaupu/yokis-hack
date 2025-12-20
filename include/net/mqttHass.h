@@ -1,4 +1,4 @@
-#if WIFI_ENABLED && defined(ESP8266) && MQTT_ENABLED
+#if WIFI_ENABLED && (defined(ESP8266) || defined(ESP32)) && MQTT_ENABLED
 #ifndef __MQTT_HASS_H__
 #define __MQTT_HASS_H__
 
@@ -6,7 +6,11 @@
 // See https://www.home-assistant.io/docs/mqtt/discovery
 
 #include <Arduino.h>
+#if defined(ESP8266)
 #include <ESP8266WiFi.h>
+#elif defined(ESP32)
+#include <WiFi.h>
+#endif
 
 #include "RF/device.h"
 #include "net/mqtt.h"
@@ -35,4 +39,4 @@ class MqttHass : public Mqtt {
 };
 
 #endif  // __MQTT_HASS_H__
-#endif  // ESP8266
+#endif  // ESP8266 || ESP32

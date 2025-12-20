@@ -1,4 +1,4 @@
-#if WIFI_ENABLED && defined(ESP8266) && MQTT_ENABLED
+#if WIFI_ENABLED && (defined(ESP8266) || defined(ESP32)) && MQTT_ENABLED
 #include "net/mqttConfig.h"
 #include "globals.h"
 

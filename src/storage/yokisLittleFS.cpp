@@ -1,4 +1,4 @@
-#ifdef ESP8266
+#if defined(ESP8266) || defined(ESP32)
 
 #include "storage/yokisLittleFS.h"
 
@@ -16,4 +16,4 @@ void YokisLittleFS::init() {
     }
 }
 
-#endif // ESP8266
+#endif // ESP8266 || ESP32

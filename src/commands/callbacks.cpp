@@ -58,7 +58,7 @@ void registerAllCallbacks() {
         "dimnil", "Set a dimmer to night light mode (= 7 button pushes)",
         dimmerNilCallback));
 
-#ifdef ESP8266
+#if defined(ESP8266) || defined(ESP32)
     g_serial->registerCallback(new GenericCallback(
         "save", "Save current device configuration to LittleFS",
         storeConfigCallback));
@@ -108,11 +108,11 @@ void registerAllCallbacks() {
     #endif // WIFI_ENABLED
 
     g_serial->registerCallback(
-        new GenericCallback("restart", "Restart the ESP8266 board", restart));
+        new GenericCallback("restart", "Restart the ESP board", restart));
     g_serial->registerCallback(
-        new GenericCallback("reboot", "Restart the ESP8266 board", restart));
+        new GenericCallback("reboot", "Restart the ESP board", restart));
 
-#endif // ESP8266
+#endif // ESP8266 || ESP32
 }
 
 bool pairingCallback(const char*) {
@@ -141,7 +141,7 @@ bool pairingCallback(const char*) {
 
 // Get a device from the list with the given params
 Device* getDeviceFromParams(const char* params) {
-#ifdef ESP8266
+#if defined(ESP8266) || defined(ESP32)
     if (params == NULL || strcmp("", params) == 0) return g_currentDevice;
 
     char* paramsBak;
@@ -180,7 +180,7 @@ bool changeDeviceState(const char* params, bool (E2bp::*func)(void)) {
     IrqManager::irqType = E2BP;
     g_bp->setDevice(d);
     bool ret = (g_bp->*func)();
-#if defined(ESP8266) && MQTT_ENABLED
+#if (defined(ESP8266) || defined(ESP32)) && MQTT_ENABLED
     if (ret) {
         if (d->getMode() == DIMMER) {
             g_mqtt->notifyBrightness(d);
@@ -242,7 +242,7 @@ bool copyCallback(const char* params) {
 }
 
 bool displayDevices(const char*) {
-#ifdef ESP8266
+#if defined(ESP8266) || defined(ESP32)
     uint8_t c = 0;
     while (g_devices[c] != NULL) {
         LOG.println("=== Device ===");
@@ -372,7 +372,7 @@ bool statusAllCallback(const char* params) {
     return true;
 }
 
-#ifdef ESP8266
+#if defined(ESP8266) || defined(ESP32)
 bool storeConfigCallback(const char* params) {
     char* paramsBak;
     char* pch;
@@ -584,4 +584,4 @@ bool mqttConfigDelete(const char*) {
 }
 
 #endif // MQTT_ENABLED
-#endif // ESP8266
+#endif // ESP8266 || ESP32
