@@ -2,9 +2,8 @@
 #ifndef __YOKIS_LITTLE_FS_H__
 #define __YOKIS_LITTLE_FS_H__
 
-#if defined(ESP8266) || defined(ESP32)
 #include <LittleFS.h>
-#endif
+#define FORMAT_LITTLEFS_IF_FAILED true
 
 class YokisLittleFS {
     private:

@@ -4,6 +4,10 @@
 #include "serial/usageCallback.h"
 
 SerialHelper::SerialHelper() {
+    #ifdef ESP32
+    HardwareSerial Serial1(1);
+    HardwareSerial Serial2(2);
+    #endif
     LOG.begin(SERIAL_BAUDRATE);
     callbacksIndex = 0;
     longestCommandLength = 0;

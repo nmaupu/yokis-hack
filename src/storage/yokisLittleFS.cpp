@@ -1,6 +1,7 @@
 #if defined(ESP8266) || defined(ESP32)
 
 #include "storage/yokisLittleFS.h"
+#include "globals.h"
 
 bool YokisLittleFS::initialized = false;
 
@@ -12,7 +13,11 @@ void YokisLittleFS::init() {
         cfg.setAutoFormat(false);
         LittleFS.setConfig(cfg);
         */
-        YokisLittleFS::initialized = LittleFS.begin();
+        YokisLittleFS::initialized = LittleFS.begin(FORMAT_LITTLEFS_IF_FAILED);
+        if (!YokisLittleFS::initialized) {
+          LOG.println("LittleFS mount failed");
+          return;
+        }
     }
 }
 
