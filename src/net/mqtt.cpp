@@ -1,4 +1,4 @@
-#if WIFI_ENABLED && defined(ESP8266) && MQTT_ENABLED
+#if WIFI_ENABLED && (defined(ESP8266) || defined(ESP32)) && MQTT_ENABLED
 #include "net/mqtt.h"
 #include <Arduino.h>
 #include "globals.h"
@@ -143,6 +143,10 @@ void Mqtt::callback(char* topic, uint8_t* payload, unsigned int length) {
 
     LOG.println();
     LOG.println("-----------------------");
+}
+
+Mqtt::~Mqtt() {
+    clearSubscriptions();
 }
 
 #endif

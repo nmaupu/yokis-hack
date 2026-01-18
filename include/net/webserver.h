@@ -1,9 +1,14 @@
-#if WIFI_ENABLED && defined(ESP8266) && WEBSERVER_ENABLED
+#if WIFI_ENABLED && (defined(ESP8266) || defined(ESP32)) && WEBSERVER_ENABLED
 #ifndef __WEBSERVER_H__
 #define __WEBSERVER_H__
 
+#if defined(ESP8266)
 #include <ESP8266WiFi.h>
 #include <ESPAsyncTCP.h>
+#elif defined(ESP32)
+#include <WiFi.h>
+#include <AsyncTCP.h>
+#endif
 #include <ESPAsyncWebServer.h>
 #include "net/wifi.h"
 
@@ -130,4 +135,4 @@ class WebServer : public AsyncWebServer {
 };
 
 #endif  // __WEBSERVER_H__
-#endif  // WIFI_ENABLED && ESP8266 && WEBSERVER_ENABLED
+#endif  // WIFI_ENABLED && (ESP8266 || ESP32) && WEBSERVER_ENABLED

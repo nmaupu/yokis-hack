@@ -1,8 +1,15 @@
-#ifdef ESP8266
+#if defined(ESP8266) || defined(ESP32)
 #ifndef __YOKIS_LITTLE_FS_H__
 #define __YOKIS_LITTLE_FS_H__
 
 #include <LittleFS.h>
+
+#ifdef ESP32
+#ifndef FORMAT_LITTLEFS_IF_FAILED
+  #define FORMAT_LITTLEFS_IF_FAILED true
+#endif
+#endif
+
 
 class YokisLittleFS {
     private:
@@ -13,4 +20,4 @@ class YokisLittleFS {
 };
 
 #endif  // __YOKIS_LITTLE_FS_H__
-#endif  // ESP8266
+#endif  // ESP8266 || ESP32

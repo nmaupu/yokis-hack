@@ -12,6 +12,12 @@
     #define IRQ_PIN D1
     // status led to turn off
     #define STATUS_LED D4
+#elif defined(ESP32)
+    #define CE_PIN 4
+    #define CSN_PIN 5
+    #define IRQ_PIN 2
+    // status led to turn off (built-in LED on most ESP32 boards)
+    #define STATUS_LED 2
 #else
     // Arduino
     #define CE_PIN 7

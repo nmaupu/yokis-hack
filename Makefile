@@ -30,6 +30,21 @@ build:
 	  -e MQTT_MAX_PACKET_SIZE=$(MQTT_MAX_PACKET_SIZE) \
 	  nmaupu/platformio-docker-build:latest pio run -e d1_mini
 
+.PHONY: build-esp32
+build-esp32:
+	docker run --rm -it \
+	  -v $(PWD):/opt/workspace \
+	  -w /opt/workspace \
+	  -e PLATFORMIO_CACHE_DIR=/opt/workspace/.pio-cache \
+	  -e MQTT_ENABLED=$(MQTT_ENABLED) \
+	  -e WEBSERVER_ENABLED=$(WEBSERVER_ENABLED) \
+	  -e WIFI_ENABLED=$(WIFI_ENABLED) \
+	  -e WIFI_SSID=$(WIFI_SSID) \
+	  -e WIFI_PASSWORD=$(WIFI_PASSWORD) \
+	  -e PROG_VERSION=$(PROG_VERSION) \
+	  -e MQTT_MAX_PACKET_SIZE=$(MQTT_MAX_PACKET_SIZE) \
+	  nmaupu/platformio-docker-build:latest pio run -e esp32
+
 .PHONY: upload
 upload:
 	docker run --rm -it \

@@ -21,7 +21,7 @@ void Scanner::setupRFModule() {
     delay(5);
 }
 
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 IRAM_ATTR
 #endif
 void Scanner::interruptRxReady() {
@@ -36,12 +36,12 @@ void Scanner::interruptRxReady() {
     }
 }
 
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 IRAM_ATTR
 #endif
 void Scanner::interruptTxOk() {}
 
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 IRAM_ATTR
 #endif
 void Scanner::interruptTxFailed() {}

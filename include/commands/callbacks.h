@@ -3,9 +3,9 @@
 
 #include <stdint.h>
 
-#ifdef ESP8266
+#if defined(ESP8266) || defined(ESP32)
 #include <Ticker.h>
-#endif  // ESP8266
+#endif  // ESP8266 || ESP32
 
 #include "RF/copy.h"
 #include "RF/device.h"
@@ -20,9 +20,9 @@ void registerAllCallbacks();
 
 bool changeDeviceState(const char*, bool (E2bp::*)(void));
 
-#ifdef ESP8266
+#if defined(ESP8266) || defined(ESP32)
 void pollDevice(Device* device);  // Interrupt func
-#endif // ESP8266
+#endif // ESP8266 || ESP32
 
 bool pairingCallback(const char*);
 bool onCallback(const char*);
@@ -44,7 +44,7 @@ bool dimmerMinCallback(const char*);
 bool dimmerNilCallback(const char*);
 bool dimmerSet(const char*, const uint8_t);
 
-#ifdef ESP8266
+#if defined(ESP8266) || defined(ESP32)
 Device* getDeviceFromParams(const char*);
 
 bool storeConfigCallback(const char*);
@@ -65,6 +65,6 @@ bool mqttDiag(const char*);
 bool mqttConfigDelete(const char*);
 #endif  // MQTT_ENABLED
 
-#endif  // ESP8266
+#endif  // ESP8266 || ESP32
 
 #endif  //__CALLBACKS_H__

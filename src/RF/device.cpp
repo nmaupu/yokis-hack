@@ -3,7 +3,7 @@
 #include "globals.h"
 #include "utils.h"
 
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 #include <FS.h>
 #endif
 
@@ -295,7 +295,7 @@ Device* Device::getFromList(Device** devices, size_t size,
     return d;
 }
 
-#ifdef ESP8266
+#if defined(ESP8266) || defined(ESP32)
 
 // Static - Store a raw configuration line into LittleFS
 bool Device::storeRawConfig(const char* line) {

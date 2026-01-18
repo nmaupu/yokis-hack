@@ -59,19 +59,19 @@ bool Copy::send() {
     return !isFailed;
 }
 
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 IRAM_ATTR
 #endif
 void Copy::interruptRxReady() {
     // Nothing will be received
 }
 
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 IRAM_ATTR
 #endif
 void Copy::interruptTxOk() { isFailed = false; }
 
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 IRAM_ATTR
 #endif
 void Copy::interruptTxFailed() {

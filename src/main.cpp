@@ -10,12 +10,17 @@
 #include "printf.h"
 #include "serial/serialHelper.h"
 
-#ifdef ESP8266
+#if defined(ESP8266) || defined(ESP32)
 #include <ArduinoOTA.h>
-#include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 #include <Ticker.h>
 #include <WiFiUdp.h>
+
+#if defined(ESP8266)
+#include <ESP8266WiFi.h>
+#elif defined(ESP32)
+#include <WiFi.h>
+#endif
 
 #if MQTT_ENABLED
 #include "net/mqttHass.h"
@@ -42,19 +47,19 @@ E2bp* g_bp;
 Scanner* g_scanner;
 Copy* g_copy;
 Device* g_currentDevice;
-uint8 g_nb_devices;
+uint8_t g_nb_devices;
 
-#ifdef ESP8266
+#if defined(ESP8266) || defined(ESP32)
 #if MQTT_ENABLED
 MqttHass* g_mqtt;
 #endif // MQTT_ENABLED
 TelnetSpy g_telnetAndSerial;
 // no need to store more devices than supported by MQTT
 Device* g_devices[MAX_YOKIS_DEVICES_NUM];
-#endif // ESP8266
+#endif // ESP8266 || ESP32
 
 //
-#ifdef ESP8266
+#if defined(ESP8266) || defined(ESP32)
 
 #if WIFI_ENABLED
 WiFiClient espClient;
@@ -72,7 +77,7 @@ void pollForStatus(Device* device);
 void mqttCallback(char*, uint8_t*, unsigned int);
 #endif // MQTT_ENABLED
 
-#endif // ESP8266
+#endif // ESP8266 || ESP32
 
 // Setup inits everything: singletons and commands' callback
 void setup() {
@@ -86,7 +91,7 @@ void setup() {
     g_copy = new Copy(CE_PIN, CSN_PIN);
     g_currentDevice = new Device(CURRENT_DEVICE_DEFAULT_NAME);
 
-#ifdef ESP8266
+#if defined(ESP8266) || defined(ESP32)
     pinMode(STATUS_LED, OUTPUT);
     digitalWrite(STATUS_LED, HIGH);  // pin is inverted so, set it off
 
@@ -166,7 +171,7 @@ void setup() {
 }
 
 void loop() {
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
     LOG.handle(); // telnetspy handling
     ArduinoOTA.handle();
 
@@ -201,13 +206,13 @@ void loop() {
         }
     }
 #endif // MQTT_ENABLED
-#endif // ESP8266
+#endif // ESP8266 || ESP32
     g_serial->readFromSerial();
     delay(1);
 }
 
 
-#if defined(ESP8266) && MQTT_ENABLED
+#if (defined(ESP8266) || defined(ESP32)) && MQTT_ENABLED
 void pollForStatus(Device* d) {
     IrqManager::irqType = E2BP;
     g_bp->setDevice(d);
@@ -257,7 +262,7 @@ void pollForStatus(Device* d) {
 }
 #endif
 
-#if defined(ESP8266) && MQTT_ENABLED
+#if (defined(ESP8266) || defined(ESP32)) && MQTT_ENABLED
 void mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
     char* tok;
     char* mTokBuf = NULL;
@@ -359,4 +364,4 @@ void mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
     delete[] mCmnd;
     delete[] mPayload;
 }
-#endif  // #if defined(ESP8266) && defined(MQTT_ENABLED)
+#endif  // #if (defined(ESP8266) || defined(ESP32)) && defined(MQTT_ENABLED)

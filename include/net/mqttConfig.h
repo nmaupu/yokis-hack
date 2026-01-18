@@ -1,8 +1,10 @@
-#if WIFI_ENABLED && defined(ESP8266) && MQTT_ENABLED
+#if WIFI_ENABLED && (defined(ESP8266) || defined(ESP32)) && MQTT_ENABLED
 #ifndef __MQTT_CONFIG_H__
 #define __MQTT_CONFIG_H__
 
+#if defined(ESP8266) || defined(ESP32)
 #include <LittleFS.h>
+#endif
 #include <WString.h>
 #include <stdlib.h>
 
@@ -45,4 +47,4 @@ class MqttConfig {
 };
 
 #endif  // __MQTT_CONFIG_H__
-#endif  // ESP8266
+#endif  // ESP8266 || ESP32

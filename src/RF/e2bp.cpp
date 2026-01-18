@@ -446,7 +446,7 @@ void E2bp::setupPayload(const uint8_t* payload) {
     write_payload(payload, PAYLOAD_LENGTH, W_TX_PAYLOAD);
 }
 
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 IRAM_ATTR
 #endif
 void E2bp::stopMainLoop() {
@@ -454,7 +454,7 @@ void E2bp::stopMainLoop() {
     // counter = 0;
 }
 
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 IRAM_ATTR
 #endif
 void E2bp::interruptTxOk() {
@@ -466,7 +466,7 @@ void E2bp::interruptTxOk() {
     write_register(NRF_STATUS, 0b01110000);  // Reset interrupts
 }
 
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 IRAM_ATTR
 #endif
 void E2bp::interruptRxReady() {
@@ -477,7 +477,7 @@ void E2bp::interruptRxReady() {
     stopMainLoop();
 }
 
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 IRAM_ATTR
 #endif
 void E2bp::interruptTxFailed() {

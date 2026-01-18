@@ -1,4 +1,4 @@
-#if WIFI_ENABLED && defined(ESP8266)
+#if WIFI_ENABLED && (defined(ESP8266) || defined(ESP32))
 #include "net/wifi.h"
 #include "globals.h"
 
@@ -10,12 +10,20 @@ void setupWifi(String ssid, String password) {
         WiFi.persistent(true);
         WiFi.disconnect(true);
         WiFi.mode(WIFI_STA);
+#if defined(ESP8266)
         WiFi.setSleepMode(WIFI_NONE_SLEEP);
+#endif
         WiFi.setAutoReconnect(true);
+#if defined(ESP8266)
         WiFi.setAutoConnect(true);
+#endif
         WiFi.persistent(false);
 
+#if defined(ESP8266)
         WiFi.begin(ssid.c_str(), password.c_str(), 0, NULL, true);
+#elif defined(ESP32)
+        WiFi.begin(ssid.c_str(), password.c_str());
+#endif
     } else {
         // Since arduino core v3, wifi boots with radio set to OFF
         // Need to reconnect when calling setupWifi at boot when wifi
@@ -28,9 +36,13 @@ int reconnectWifi() {
     //WiFi.disconnect(true); // this makes wifi not connecting somehow
     WiFi.persistent(true);
     WiFi.mode(WIFI_STA);
+#if defined(ESP8266)
     WiFi.setSleepMode(WIFI_NONE_SLEEP);
+#endif
     WiFi.setAutoReconnect(true);
+#if defined(ESP8266)
     WiFi.setAutoConnect(true);
+#endif
     WiFi.reconnect();
     WiFi.persistent(false);
 
@@ -79,7 +91,11 @@ void setupWifiAP() {
     // Scan network here
 
     String ssid = "YokisHack-";
+#if defined(ESP8266)
     ssid += String(ESP.getFlashChipId(), HEX);
+#elif defined(ESP32)
+    ssid += String((uint32_t)ESP.getEfuseMac(), HEX);
+#endif
     WiFi.softAP(ssid, "");
     WiFi.mode(WIFI_AP);
     WiFi.waitForConnectResult();
@@ -94,7 +110,11 @@ void setupWifiAP() {
 bool resetWifiConfig() {
     WiFi.persistent(true);
     WiFi.disconnect(true);
+#if defined(ESP8266)
     ESP.eraseConfig();
+#elif defined(ESP32)
+    WiFi.disconnect(true, true);
+#endif
     WiFi.persistent(false);
     return WiFi.status() == WL_DISCONNECTED && WiFi.SSID().isEmpty();
 }

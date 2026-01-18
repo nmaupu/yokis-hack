@@ -2,11 +2,11 @@
 #include "RF/configurator.h"
 #include "globals.h"
 
-// Needed to compile on ESP8266 platform
+// Needed to compile on ESP8266/ESP32 platform
 // To use interrupt, we have to use IRAM_ATTR to store the function in the
 // RAM See
 // https://stackoverflow.com/questions/58113937/esp8266-arduino-why-is-it-necessary-to-add-the-icache-ram-attr-macro-to-isrs-an
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 IRAM_ATTR
 #endif
 // Process IRQ - function has to be static for Arduino's attachInterrupt

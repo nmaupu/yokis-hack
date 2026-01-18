@@ -3,15 +3,14 @@
 
 #include <Arduino.h>
 
-#if defined(ESP8266)
-#include <LittleFS.h>
+#if defined(ESP8266) || defined(ESP32)
 #include "storage/yokisLittleFS.h"
 #endif
 
 #define HARDWARE_ADDRESS_LENGTH 5
 
-#ifdef ESP8266
-// Configuration filename to store on LittleFS when using ESP8266
+#if defined(ESP8266) || defined(ESP32)
+// Configuration filename to store on LittleFS when using ESP8266/ESP32
 #define LITTLEFS_CONFIG_FILENAME "/yokis.conf"
 #define LITTLEFS_CONFIG_BAK_FILENAME "/yokis.conf.bak"
 #define LITTLEFS_CONFIG_SEP "|"
@@ -58,7 +57,7 @@ class Device {
     bool hasToBePolledForStatus;
     uint8_t failedPolls;
 
-#ifdef ESP8266
+#if defined(ESP8266) || defined(ESP32)
     // Search for a given device in config
     static int findInConfig(const char*);
     // Delete a line in config
@@ -124,7 +123,7 @@ class Device {
     void toggleStatus();
     void copy(const Device*);
     static Device* getFromList(Device**, size_t, const char*);
-#ifdef ESP8266
+#if defined(ESP8266) || defined(ESP32)
     // Save device obj to LittleFS
     bool saveToLittleFS();
     // Store a raw device config to LittleFS (use to migrate from SPIFFS to LittleFS)
