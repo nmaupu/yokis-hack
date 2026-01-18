@@ -83,7 +83,7 @@ For `SPI` wiring, use your usual device ports.
 |-----|----------|----------|-------|
 | CE  | 7        | D2       | D4    |
 | CS  | 8        | D8       | D5    |
-| IRQ | 20       | D1       | D2    |
+| IRQ | 20       | D1       | D15   |
 
 **Wiring `IRQ` pin is not optional !**
 
@@ -121,7 +121,6 @@ esptool.py -p /dev/ttyUSB0 -b 460800 --before default-reset --after hard-reset -
 ```
 
 `bootloader.bin`, `partitions.bin` and `firmware.bin` files can be found in the release page.
-
 
 - Once uploaded and restarted, a new wifi network appears (named `YokisHack-XXXXXX`), connect to it.
 - Open your browser to the following IP address: http://192.168.4.1

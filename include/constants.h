@@ -15,7 +15,7 @@
 #elif defined(ESP32)
     #define CE_PIN 4
     #define CSN_PIN 5
-    #define IRQ_PIN 2
+    #define IRQ_PIN 15
     // status led to turn off (built-in LED on most ESP32 boards)
     #define STATUS_LED 2
 #else

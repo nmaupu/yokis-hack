@@ -102,14 +102,19 @@ void setup() {
     // If compilation options are present, override any existing configuration
     #if WIFI_ENABLED
         #ifdef WIFI_SSID
+            // Check at runtime if WIFI_SSID is non-empty
             String ssid = WIFI_SSID;
-            String psk = "";
-            #ifdef WIFI_PASSWORD
-            psk = WIFI_PASSWORD;
-            #endif // WIFI_PASSWORD
-            LOG.print("WIFI_SSID is set, forcing this configuration. SSID=");
-            LOG.println(WIFI_SSID);
-            setupWifi(ssid, psk);
+            if (ssid.length() > 0) {
+                String psk = "";
+                #ifdef WIFI_PASSWORD
+                psk = WIFI_PASSWORD;
+                #endif // WIFI_PASSWORD
+                LOG.print("WIFI_SSID is set, forcing this configuration. SSID=");
+                LOG.println(WIFI_SSID);
+                setupWifi(ssid, psk);
+            } else {
+                setupWifi(); // Setup existing configuration of set AP mode for initial config
+            }
         #else
             setupWifi(); // Setup existing configuration of set AP mode for initial config
         #endif // WIFI_SSID

@@ -9,19 +9,27 @@ WebServer::WebServer(uint16_t port) : AsyncWebServer(port) {
 
     this->on("/save_config", HTTP_GET, [](AsyncWebServerRequest* request) {
         // Getting wifi configuration
-        #ifndef WIFI_SSID
-        const AsyncWebParameter* ssid = nullptr;
-        const AsyncWebParameter* password = nullptr;
-        if(request->hasParam("wifi_ssid")) {
-            ssid = request->getParam("wifi_ssid");
-        }
-        if(request->hasParam("wifi_password")) {
-            password = request->getParam("wifi_password");
-        }
-        if(ssid != nullptr && password != nullptr) {
-            setupWifi(ssid->value(), password->value());
-        }
+        // Allow saving if WIFI_SSID is not defined, or if it's defined but empty
+        #ifdef WIFI_SSID
+            String wifiSsid = WIFI_SSID;
+            bool allowWifiConfig = (wifiSsid.length() == 0);
+        #else
+            bool allowWifiConfig = true;
         #endif // WIFI_SSID
+        
+        if(allowWifiConfig) {
+            const AsyncWebParameter* ssid = nullptr;
+            const AsyncWebParameter* password = nullptr;
+            if(request->hasParam("wifi_ssid")) {
+                ssid = request->getParam("wifi_ssid");
+            }
+            if(request->hasParam("wifi_password")) {
+                password = request->getParam("wifi_password");
+            }
+            if(ssid != nullptr && password != nullptr) {
+                setupWifi(ssid->value(), password->value());
+            }
+        }
 
         #if MQTT_ENABLED && !defined(MQTT_IP)
         // Getting MQTT configuration
@@ -81,7 +89,13 @@ WebServer::~WebServer() {}
 String WebServer::processor(const String& var) {
     if (var == "WIFI_SECTION_ENABLED") {
         #ifdef WIFI_SSID
-            return "disabled=\"\"";
+            // Check at runtime if WIFI_SSID is non-empty
+            String wifiSsid = WIFI_SSID;
+            if (wifiSsid.length() > 0) {
+                return "disabled=\"\"";
+            } else {
+                return "";
+            }
         #else
             return "";
         #endif
