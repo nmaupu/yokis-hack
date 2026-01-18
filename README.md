@@ -18,6 +18,7 @@ If you are interested, you can look at the [reverse engineering documentation](d
 This firmware can be compiled and installed on the following devices:
 - Arduino
 - ESP8266
+- ESP32
 
 The following Yokis devices are supported:
 - MTV500ER(P)
@@ -31,7 +32,7 @@ The following Yokis devices are supported:
 
 ### To v1.2
 
-Configuration storage (ESP8266 devices only) has changed (from SPIFFS to LittleFS) as of version *1.2*. As a result, before upgrading, copy your old configuration to be able to restore it afterward.
+Configuration storage (ESP8266/ESP32 devices only) has changed (from SPIFFS to LittleFS) as of version *1.2*. As a result, before upgrading, copy your old configuration to be able to restore it afterward.
 
 1. Carefully copy the result of the following command:
 ```
@@ -55,19 +56,19 @@ dRestore lamp|6f4d|2d|00|00|490020|9f84|0000
 - Make a backup of your configuration using the command `dConfigFS` (copy the content of the command's result somewhere safe)
 - Upgrade using OTA or with `esptools.py`
 - In case of issue with your config, restore it line by line using the command `dRestore`
-- In case of weird bug (module stops functioning, weird stuff in the Serial, etc.), you need to completely erase the flash of the ESP8266 and reburn the firmware.
+- In case of weird bug (module stops functioning, weird stuff in the Serial, etc.), you need to completely erase the flash of the ESP8266/ESP32 and reburn the firmware.
   Erase can be done with:
   ```
   esptool.py -p /dev/<serial_port> erase_flash
   ```
-  
+
 
 ## Usage
 
 ### Hardware needed
 
-- MCU (Arduino, ESP8266)
-- NRF24L01+ (NRF24L01 should also work)
+- MCU (Arduino, ESP8266, ESP32)
+- NRF24L01+ (NRF24L01 should also work but remains untested)
 
 Remember that the NRF24 chip must be powered with **3.3V** !! It supports 5V on SPI though.
 
@@ -78,11 +79,11 @@ I used a small adapter to better regulate power to the NRF24L01+ easily found on
 `CE`, `CS` and `IRQ` are specific to my implementation.
 For `SPI` wiring, use your usual device ports.
 
-|     | Arduino  | ESP8266  |
-|-----|----------|----------|
-| CE  | 7        | D2       |
-| CS  | 8        | D8       |
-| IRQ | 20       | D1       |
+|     | Arduino  | ESP8266  | ESP32 |
+|-----|----------|----------|-------|
+| CE  | 7        | D2       | D4    |
+| CS  | 8        | D8       | D5    |
+| IRQ | 20       | D1       | D2    |
 
 **Wiring `IRQ` pin is not optional !**
 
@@ -90,11 +91,11 @@ For `SPI` wiring, use your usual device ports.
 
 For example, here are the pinout of my testing MCUs:
 
-|      | Wemos D1 mini | Arduino Mega |
-|------|---------------|--------------|
-| CLK  | D5            | 52           |
-| MOSI | D7            | 51           |
-| MISO | D6            | 50           |
+|      | Wemos D1 mini | Arduino Mega | Elegoo ESP32 |
+|------|---------------|--------------|--------------|
+| CLK  | D5            | 52           | D18          |
+| MOSI | D7            | 51           | D23          |
+| MISO | D6            | 50           | D19          |
 
 ### Download and installation
 
@@ -102,11 +103,24 @@ See releases.
 
 Tools needed: https://github.com/espressif/esptool
 
+Can be installed with:
 
-Upload the binary file to your ESP using `esptools.py` like so:
+```
+pip install esptool
+```
+
+
+Upload the binary file to your ESP8266 board using `esptools.py` like so:
 ```
 esptool.py -p /dev/<serial_port> write_flash -fm dio 0x00000 /path/to/yokis-hack.bin
 ```
+
+On ESP32, you need to write the `bootloader` and the `partitions` files as well:
+```
+esptool.py -p /dev/ttyUSB0 -b 460800 --before default-reset --after hard-reset --chip esp32 write-flash -fm dio --flash-size detect --flash-freq 40m 0x1000 bootloader.bin 0x8000 partitions.bin 0x10000 firmware.bin
+```
+
+`bootloader.bin`, `partitions.bin` and `firmware.bin` files can be found in the release page.
 
 
 - Once uploaded and restarted, a new wifi network appears (named `YokisHack-XXXXXX`), connect to it.
@@ -137,7 +151,7 @@ The following commands can help:
 
 #### Features
 
-If you use Arduino, a very small set of features are available. Use an ESP8266 for all connectivity features (WiFi and MQTT).
+If you use Arduino, a very small set of features are available. Use an ESP8266/ESP32 for all connectivity features (WiFi and MQTT).
 
 The following features are available:
 - Command line interface over serial (115200 bauds)
@@ -185,7 +199,7 @@ From serial, one can use the following commands:
 | `wifiConfig`       | `ssid password`          | Configure wifi with parameters: ssid psk (does not work for psk containing spaces)                  |
 | `wifiDiag`         |                          | Display wifi configuration debug info                                                               |
 | `wifiReset`        |                          | Reset wifi configuration and setup AP mode                                                          |
-| `restart`          |                          | Restart the ESP8266 board                                                                           |
+| `restart`          |                          | Restart the ESP board board                                                                           |
 | `mqttConfig`       | `ip port user pass`      | Configure MQTT options (format: mqttConfig host port username password)                             |
 | `mqttDiag`         |                          | Display current MQTT configuration                                                                  |
 | `mqttConfigDelete` |                          | Delete current MQTT configuration                                                                   |
@@ -229,9 +243,23 @@ Subscribed topics:
 ## Development
 
 - Install platform.io
-- Compile with the following command (for ESP8266):
-```
+- Compile with one of the following commands
+``` sh
+# d1_mini - ESP8266
 pio run -e d1_mini -t upload
+
+# ESP32
+pio run -e esp32 -t upload
+```
+
+Or using docker:
+
+``` sh
+# d1_mini - ESP8266
+make build
+
+# ESP32
+make build-esp32
 ```
 
 Resulting `firmwares` can be uploaded to any supported device.
@@ -239,8 +267,12 @@ Resulting `firmwares` can be uploaded to any supported device.
 Firware location depends on the device:
 - Arduino Mega firmware location: `.pio/build/megaatmega2560/firmware.elf`
 - ESP8266 firmware location: `.pio/build/d1_mini/firmware.bin`
+- ESP32:
+  - firmware: `.pio/build/esp32/firmware.bin`
+  - partitions: `.pio/build/esp32/partitions.bin`
+  - bootloader: `.pio/build/esp32/bootloader.bin`
 
-To configure the ESP8266 build, use the following command:
+To configure the ESP build, use the following command:
 ```
 MQTT_IP="<MQTT_IP>" \
 MQTT_PORT="<MQTT_PORT>" \
@@ -261,3 +293,5 @@ WIFI_SSID="<SSID>" \
 WIFI_PASSWORD="<WIFI_KEY>" \
   pio run -e d1_mini_ota --upload-port=<ip_address> -t upload
 ```
+
+No OTA is being configured yet for ESP32.
