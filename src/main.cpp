@@ -210,6 +210,10 @@ void loop() {
             }
         }
     }
+    else {
+        // Disconnected, force discovery again next time
+        g_mqtt->setDiscoveryDone(false);
+    }
 #endif // MQTT_ENABLED
 #endif // ESP8266 || ESP32
     g_serial->readFromSerial();
