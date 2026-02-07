@@ -355,6 +355,9 @@ void mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
                 case BRIGHTNESS_MID:
                     g_bp->dimmerMid();
                     break;
+                case BRIGHTNESS_MAX:
+                    g_bp->dimmerMax();
+                    break;
                 default:  // MAX values
                     g_bp->on();
                     break;
