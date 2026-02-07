@@ -179,7 +179,7 @@ void loop() {
 #if defined(ESP8266) || defined(ESP32)
     LOG.handle(); // telnetspy handling
     ArduinoOTA.handle();
-
+    
     #if MQTT_ENABLED
     g_mqtt->loop();
 
@@ -209,6 +209,11 @@ void loop() {
                 pollForStatus(g_devices[i]);
             }
         }
+    }
+    else
+    {
+        // Disconnected, force discovery again next time
+        g_mqtt->setDiscoveryDone(false);
     }
 #endif // MQTT_ENABLED
 #endif // ESP8266 || ESP32
