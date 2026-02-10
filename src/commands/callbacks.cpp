@@ -257,14 +257,12 @@ bool displayDevices(const char*) {
     return true;
 }
 
-bool dimmerEffectNoneCallback(const char* params)
-{
+bool dimmerEffectNoneCallback(const char* params) {
     int ret = changeDeviceState(params, &E2bp::dimmerEffectNone);
     return ret != -1;
 }
 
-bool dimmerEffectBreathCallback(const char* params)
-{
+bool dimmerEffectBreathCallback(const char* params) {
     int ret = changeDeviceState(params, &E2bp::dimmerEffectBreath);
     return ret != -1;
 }

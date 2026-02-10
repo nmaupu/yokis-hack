@@ -183,7 +183,7 @@ void Device::setMode(const char* mode) {
 
 void Device::setStatus(DeviceStatus status) {
     this->status = status;
-    if (this->status == OFF){
+    if (this->status == OFF) {
         this->setBrightness(BRIGHTNESS_OFF);
         this->setDimmerEffect(EFFECT_NONE);
     }

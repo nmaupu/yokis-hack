@@ -302,7 +302,7 @@ void mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
     strncpy(mCmnd, tok, len);
     mCmnd[len] = 0;
 
-    // If we update this device too soon, ignore the payload expect for FX
+    // If we update this device too soon, ignore the payload except for FX
     unsigned long now = millis();
     if (d->getLastUpdateMillis() + MQTT_UPDATE_MILLIS_WINDOW > now && strcmp(mCmnd, "FX") != 0) {
         LOG.println(
@@ -344,7 +344,7 @@ void mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
         case DIMMER:
             if (strcmp(mCmnd, "POWER") == 0 || strcmp(mCmnd,"BRIGHTNESS") == 0)
             {
-                // When changing from effect Breath to None, HA send both a FX change message and a brightness value (the original brightness value, not related to the current brightness of the bulb).
+                // When changing from effect Breath to None, HA sends both a FX change message and a brightness value (the original brightness value, not related to the current brightness of the bulb).
                 // When breathing, we want to skip the brightness value so that the user can choose custom brightness using the breath effect (from Breath to None)
                 // If we are in effect breathing, only take into account the power command.
                 if (d->getDimmerEffect() != DimmerEffect::EFFECT_BREATHING || strcmp(mCmnd,"POWER") == 0)
@@ -373,7 +373,8 @@ void mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
                         g_bp->on();
                         break;
                     }
-                        g_mqtt->notifyBrightness(d);
+
+                    g_mqtt->notifyBrightness(d);
                 }
                 else
                 {
