@@ -342,13 +342,11 @@ void mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
             g_mqtt->notifyPower(d);
             break;
         case DIMMER:
-            if (strcmp(mCmnd, "POWER") == 0 || strcmp(mCmnd,"BRIGHTNESS") == 0)
-            {
+            if (strcmp(mCmnd, "POWER") == 0 || strcmp(mCmnd,"BRIGHTNESS") == 0) {
                 // When changing from effect Breath to None, HA sends both a FX change message and a brightness value (the original brightness value, not related to the current brightness of the bulb).
                 // When breathing, we want to skip the brightness value so that the user can choose custom brightness using the breath effect (from Breath to None)
                 // If we are in effect breathing, only take into account the power command.
-                if (d->getDimmerEffect() != DimmerEffect::EFFECT_BREATHING || strcmp(mCmnd,"POWER") == 0)
-                {
+                if (d->getDimmerEffect() != DimmerEffect::EFFECT_BREATHING || strcmp(mCmnd,"POWER") == 0) {
                     // brightness will be 0 for anything that is not a number
                     // so will set light to OFF for all possible POWER cases (ON OR
                     // OFF) HASS will send only POWER OFF, never POWER ON because
@@ -376,22 +374,18 @@ void mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
 
                     g_mqtt->notifyBrightness(d);
                 }
-                else
-                {
+                else {
                     LOG.println("Breathing, ignore brightness request");
                 }
             }
             else if (strcmp(mCmnd, "FX") == 0) {
-                if (strcmp(mPayload,"None") == 0)
-                {
+                if (strcmp(mPayload,"None") == 0) {
                     g_bp->dimmerEffectNone();
                 }
-                else if (strcmp(mPayload,"Breath") == 0)
-                {
+                else if (strcmp(mPayload,"Breath") == 0) {
                     g_bp->dimmerEffectBreath();
                 }
-                else
-                {
+                else {
                     LOG.println("Effect not handled.");
                 }
             }
