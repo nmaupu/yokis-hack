@@ -42,6 +42,11 @@ enum DimmerBrightness {
     BRIGHTNESS_MAX = 4
 };
 
+enum DimmerEffect {
+    EFFECT_NONE,
+    EFFECT_BREATHING
+};
+
 class Device {
    private:
     char* name;
@@ -53,6 +58,7 @@ class Device {
     DeviceStatus status;
     DeviceAvailability availability;
     DimmerBrightness brightness;  // only for dimmer device
+    DimmerEffect dimmerEffect;
     unsigned long lastUpdateMillis;
     bool hasToBePolledForStatus;
     uint8_t failedPolls;
@@ -86,6 +92,7 @@ class Device {
     const DeviceMode getMode() const;
     const DeviceStatus getStatus() const;
     const DimmerBrightness getBrightness() const;
+    const DimmerEffect getDimmerEffect() const;
     const DeviceAvailability getAvailability() const;
     // Last time device status was updated
     const unsigned long getLastUpdateMillis() const;
@@ -108,6 +115,7 @@ class Device {
     void setMode(const char*);
     void setStatus(DeviceStatus);
     void setBrightness(DimmerBrightness);
+    void setDimmerEffect(DimmerEffect);
     void setAvailability(DeviceAvailability);
     void online();
     void offline();

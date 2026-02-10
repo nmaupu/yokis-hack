@@ -294,9 +294,17 @@ void mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
     tok = strtok(mTokBuf, "/");  // device name
     d = Device::getFromList(g_devices, MAX_YOKIS_DEVICES_NUM, tok);
 
-    // If we update this device too soon, ignore the payload
+    // Get cmnd type (POWER or BRIGHTNESS)
+    tok = strtok(NULL, "/");  // cmnd
+    tok = strtok(NULL, "/");  // POWER or BRIGHTNESS
+    len = strlen(tok);
+    mCmnd = new char[len + 1];
+    strncpy(mCmnd, tok, len);
+    mCmnd[len] = 0;
+
+    // If we update this device too soon, ignore the payload expect for FX
     unsigned long now = millis();
-    if (d->getLastUpdateMillis() + MQTT_UPDATE_MILLIS_WINDOW > now) {
+    if (d->getLastUpdateMillis() + MQTT_UPDATE_MILLIS_WINDOW > now && strcmp(mCmnd, "FX") != 0) {
         LOG.println(
             "Ignoring MQTT message: received too soon for this device");
         LOG.print("Last update: ");
@@ -310,14 +318,6 @@ void mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
         delete[] mTokBuf;
         return;
     }
-
-    // Get cmnd type (POWER or BRIGHTNESS)
-    tok = strtok(NULL, "/");  // cmnd
-    tok = strtok(NULL, "/");  // POWER or BRIGHTNESS
-    len = strlen(tok);
-    mCmnd = new char[len + 1];
-    strncpy(mCmnd, tok, len);
-    mCmnd[len] = 0;
 
     // Get payload
     mPayload = new char[length + 1];
@@ -342,32 +342,63 @@ void mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
             g_mqtt->notifyPower(d);
             break;
         case DIMMER:
-            // brightness will be 0 for anything that is not a number
-            // so will set light to OFF for all possible POWER cases (ON OR
-            // OFF) HASS will send only POWER OFF, never POWER ON because
-            // on_command_type=brightness set on MQTT configuration (see
-            // MqttHass class)
-            int brightness = (uint8_t)atoi(mPayload);
+            if (strcmp(mCmnd, "POWER") == 0 || strcmp(mCmnd,"BRIGHTNESS") == 0)
+            {
+                // When changing from effect Breath to None, HA send both a FX change message and a brightness value (the original brightness value, not related to the current brightness of the bulb).
+                // When breathing, we want to skip the brightness value so that the user can choose custom brightness using the breath effect (from Breath to None)
+                // If we are in effect breathing, only take into account the power command.
+                if (d->getDimmerEffect() != DimmerEffect::EFFECT_BREATHING || strcmp(mCmnd,"POWER") == 0)
+                {
+                    // brightness will be 0 for anything that is not a number
+                    // so will set light to OFF for all possible POWER cases (ON OR
+                    // OFF) HASS will send only POWER OFF, never POWER ON because
+                    // on_command_type=brightness set on MQTT configuration (see
+                    // MqttHass class)
+                    int brightness = (uint8_t)atoi(mPayload);
 
-            switch (brightness) {
-                case BRIGHTNESS_OFF:
-                    g_bp->off();
-                    break;
-                case BRIGHTNESS_MIN:
-                    g_bp->dimmerMin();
-                    break;
-                case BRIGHTNESS_MID:
-                    g_bp->dimmerMid();
-                    break;
-                case BRIGHTNESS_MAX:
-                    g_bp->dimmerMax();
-                    break;
-                default:  // MAX values
-                    g_bp->on();
-                    break;
+                    switch (brightness) {
+                        case BRIGHTNESS_OFF:
+                            g_bp->off();
+                            break;
+                        case BRIGHTNESS_MIN:
+                            g_bp->dimmerMin();
+                            break;
+                        case BRIGHTNESS_MID:
+                            g_bp->dimmerMid();
+                            break;
+                        case BRIGHTNESS_MAX:
+                        g_bp->dimmerMax();
+                        break;
+                        default:  // MAX values
+                        g_bp->on();
+                        break;
+                    }
+                        g_mqtt->notifyBrightness(d);
+                }
+                else
+                {
+                    LOG.println("Breathing, ignore brightness request");
+                }
             }
+            else if (strcmp(mCmnd, "FX") == 0) {
+                if (strcmp(mPayload,"None") == 0)
+                {
+                    g_bp->dimmerEffectNone();
+                }
+                else if (strcmp(mPayload,"Breath") == 0)
+                {
+                    g_bp->dimmerEffectBreath();
+                }
+                else
+                {
+                    LOG.println("Effect not handled.");
+                }
+            }
+            else {
 
-            g_mqtt->notifyBrightness(d);
+                LOG.print("Command not handled :");
+                LOG.println(mCmnd);
+            }
             break;
     }
 

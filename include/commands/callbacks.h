@@ -42,6 +42,8 @@ bool dimmerMaxCallback(const char*);
 bool dimmerMidCallback(const char*);
 bool dimmerMinCallback(const char*);
 bool dimmerNilCallback(const char*);
+bool dimmerEffectNoneCallback(const char*);
+bool dimmerEffectBreathCallback(const char*);
 bool dimmerSet(const char*, const uint8_t);
 
 #if defined(ESP8266) || defined(ESP32)
