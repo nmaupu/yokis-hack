@@ -373,23 +373,19 @@ void mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
                     }
 
                     g_mqtt->notifyBrightness(d);
-                }
-                else {
+                } else {
                     LOG.println("Breathing, ignore brightness request");
                 }
             }
             else if (strcmp(mCmnd, "FX") == 0) {
                 if (strcmp(mPayload,"None") == 0) {
                     g_bp->dimmerEffectNone();
-                }
-                else if (strcmp(mPayload,"Breath") == 0) {
+                } else if (strcmp(mPayload,"Breath") == 0) {
                     g_bp->dimmerEffectBreath();
-                }
-                else {
+                } else {
                     LOG.println("Effect not handled.");
                 }
-            }
-            else {
+            } else {
 
                 LOG.print("Command not handled :");
                 LOG.println(mCmnd);
