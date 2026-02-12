@@ -385,7 +385,6 @@ void mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
                     LOG.println("Effect not handled.");
                 }
             } else {
-
                 LOG.print("Command not handled :");
                 LOG.println(mCmnd);
             }
