@@ -39,6 +39,10 @@ char* MqttHass::newMessageJson(const Device* device, char* buf) {
                 "\"bri_scl\":\"4\","  // 0=toggle, 1=min, 2=mid, 3/4=max
                 "\"bri_stat_t\":\"~tele/BRIGHTNESS\","
                 "\"bri_val_tpl\":\"{{value_json.BRIGHTNESS}}\","
+                "\"fx_cmd_t\":\"~cmnd/FX\","
+                "\"fx_stat_t\":\"~tele/FX\","
+                "\"fx_val_tpl\":\"{{value_json.FX}}\","
+                "\"fx_list\": [\"None\",\"Breath\"],"
                 "\"cmd_t\":\"~cmnd/POWER\","
                 "\"pl_off\":\"OFF\","
                 "\"state_topic\":\"~tele/STATE\","
@@ -168,6 +172,8 @@ void MqttHass::subscribeDevice(const Device* device) {
         sprintf(buf, "%s/cmnd/POWER", device->getName());
         this->subscribe(buf);
         sprintf(buf, "%s/cmnd/BRIGHTNESS", device->getName());
+        this->subscribe(buf);
+        sprintf(buf, "%s/cmnd/FX", device->getName());
         this->subscribe(buf);
     }
 }

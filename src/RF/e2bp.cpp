@@ -119,6 +119,20 @@ bool E2bp::toggle() {
     return retPress && retRelease;
 }
 
+bool E2bp::dimmerEffectBreath() {
+    reset();
+    setupRFModule();
+    device->setDimmerEffect(DimmerEffect::EFFECT_BREATHING);
+    return press();
+}
+
+bool E2bp::dimmerEffectNone() {
+    device->setDimmerEffect(DimmerEffect::EFFECT_NONE);
+    reset();
+    setupRFModule();
+    return release();
+}
+
 // See Yokis MTV500ER manual for those configs
 // Note: depending on configuration, 2 pulses can set to memory or 100%
 // default is 100% for 2 pulses, that's what we will be using here...

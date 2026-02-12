@@ -65,6 +65,11 @@ class E2bp : public RFConfigurator {
     bool dimmerMin();
     // Set dimmer to "night light"
     bool dimmerNiL();
+
+    // Set dimmer effect 
+    bool dimmerEffectBreath();
+    bool dimmerEffectNone();
+
     // press the button
     bool press();
     // release the button

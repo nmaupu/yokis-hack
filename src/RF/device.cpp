@@ -18,6 +18,7 @@ Device::Device(const char* dname) {
     this->setStatus(UNDEFINED);
     this->setAvailability(ONLINE);
     this->setBrightness(BRIGHTNESS_OFF);
+    this->setDimmerEffect(EFFECT_NONE);
     this->lastUpdateMillis = 0;
     this->hasToBePolledForStatus = false;
 }
@@ -61,6 +62,8 @@ const DeviceMode Device::getMode() const { return mode; }
 const DeviceStatus Device::getStatus() const { return status; }
 
 const DimmerBrightness Device::getBrightness() const { return brightness; }
+
+const DimmerEffect Device::getDimmerEffect() const { return dimmerEffect; }
 
 const DeviceAvailability Device::getAvailability() const {
     return availability;
@@ -180,13 +183,21 @@ void Device::setMode(const char* mode) {
 
 void Device::setStatus(DeviceStatus status) {
     this->status = status;
-    if (this->status == OFF) this->setBrightness(BRIGHTNESS_OFF);
+    if (this->status == OFF) {
+        this->setBrightness(BRIGHTNESS_OFF);
+        this->setDimmerEffect(EFFECT_NONE);
+    }
+
     this->lastUpdateMillis = millis();
 }
 
 void Device::setBrightness(DimmerBrightness brightness) {
     this->brightness = brightness;
     this->lastUpdateMillis = millis();
+}
+
+void Device::setDimmerEffect(DimmerEffect effect) {
+    this->dimmerEffect = effect;
 }
 
 void Device::setAvailability(DeviceAvailability availability) {
@@ -271,6 +282,7 @@ void Device::copy(const Device* d) {
     this->setMode(d->getMode());
     this->setStatus(d->getStatus());
     this->setBrightness(d->getBrightness());
+    this->setDimmerEffect(d->getDimmerEffect());
     this->setAvailability(d->getAvailability());
     this->lastUpdateMillis = d->lastUpdateMillis;
 }
