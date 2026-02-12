@@ -376,8 +376,7 @@ void mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
                 } else {
                     LOG.println("Breathing, ignore brightness request");
                 }
-            }
-            else if (strcmp(mCmnd, "FX") == 0) {
+            } else if (strcmp(mCmnd, "FX") == 0) {
                 if (strcmp(mPayload,"None") == 0) {
                     g_bp->dimmerEffectNone();
                 } else if (strcmp(mPayload,"Breath") == 0) {
