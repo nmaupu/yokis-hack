@@ -61,7 +61,8 @@ upload:
 	  nmaupu/platformio-docker-build:latest pio run -e d1_mini_ota --upload-port=192.168.12.223 -t upload
 
 release: build build-esp32
-	mkdir release
+	rm -rf release/
+	mkdir release/
 	cp .pio/build/d1_mini/firmware.bin release/firmware-esp8266.bin
 	cp .pio/build/esp32/firmware.bin release/firmware-esp32.bin
 	cp .pio/build/esp32/bootloader.bin release/bootloader-esp32.bin
