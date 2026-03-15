@@ -17,13 +17,12 @@ void setupWifi(String ssid, String password) {
 #if defined(ESP8266)
         WiFi.setAutoConnect(true);
 #endif
-        WiFi.persistent(false);
-
 #if defined(ESP8266)
         WiFi.begin(ssid.c_str(), password.c_str(), 0, NULL, true);
 #elif defined(ESP32)
         WiFi.begin(ssid.c_str(), password.c_str());
 #endif
+        WiFi.persistent(false);
     } else {
         // Since arduino core v3, wifi boots with radio set to OFF
         // Need to reconnect when calling setupWifi at boot when wifi
