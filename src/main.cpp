@@ -12,6 +12,7 @@
 
 #if defined(ESP8266) || defined(ESP32)
 #include <ArduinoOTA.h>
+#include <DNSServer.h>
 #include <PubSubClient.h>
 #include <Ticker.h>
 #include <WiFiUdp.h>
@@ -70,6 +71,45 @@ WebServer webserver(80);
 
 Ticker* g_deviceStatusPollers[MAX_YOKIS_DEVICES_NUM];
 
+#if WIFI_ENABLED
+DNSServer dnsServer;
+bool g_apMode = false;
+#endif
+
+// LED feedback: blink patterns based on device state
+// LED is inverted: LOW = ON, HIGH = OFF
+void updateStatusLED() {
+    static unsigned long lastToggle = 0;
+    static bool ledState = false;
+    unsigned long now = millis();
+    unsigned long interval;
+
+    #if WIFI_ENABLED
+    if (WiFi.status() != WL_CONNECTED) {
+        interval = 200;  // Fast blink: no WiFi
+    }
+    #if MQTT_ENABLED
+    else if (!g_mqtt->connected()) {
+        interval = 1000;  // Slow blink: WiFi OK, no MQTT
+    }
+    #endif
+    else {
+        // All connected: LED off
+        digitalWrite(STATUS_LED, HIGH);
+        return;
+    }
+    #else
+    digitalWrite(STATUS_LED, HIGH);
+    return;
+    #endif
+
+    if (now - lastToggle >= interval) {
+        lastToggle = now;
+        ledState = !ledState;
+        digitalWrite(STATUS_LED, ledState ? LOW : HIGH);
+    }
+}
+
 // polling
 void pollForStatus(Device* device);
 
@@ -122,6 +162,10 @@ void setup() {
         #if WEBSERVER_ENABLED
         // Starting webserver
         webserver.begin();
+        // Start captive portal DNS if in AP mode
+        if (g_apMode) {
+            dnsServer.start(53, "*", WiFi.softAPIP());
+        }
         #endif
 
         #if MQTT_ENABLED
@@ -179,6 +223,13 @@ void loop() {
 #if defined(ESP8266) || defined(ESP32)
     LOG.handle(); // telnetspy handling
     ArduinoOTA.handle();
+    updateStatusLED();
+
+    #if WIFI_ENABLED && WEBSERVER_ENABLED
+    if (g_apMode) {
+        dnsServer.processNextRequest();
+    }
+    #endif
 
     #if WIFI_ENABLED
     // Escalating WiFi reconnection after beacon timeout disconnects
