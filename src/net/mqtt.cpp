@@ -86,6 +86,11 @@ bool Mqtt::reconnect(bool force) {
         return false;
     }
 
+    // Don't attempt MQTT if WiFi is not connected
+    if (WiFi.status() != WL_CONNECTED) {
+        return false;
+    }
+
     // Retry once in a while to avoid blocking serial console
     // Handling too big unsigned long
     if(!force) {

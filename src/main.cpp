@@ -180,6 +180,52 @@ void loop() {
     LOG.handle(); // telnetspy handling
     ArduinoOTA.handle();
 
+    #if WIFI_ENABLED
+    // Escalating WiFi reconnection after beacon timeout disconnects
+    // Phase 1 (attempts 1-3):  WiFi.reconnect() every 5s
+    // Phase 2 (attempts 4-6):  Full disconnect + begin cycle every 10s
+    // Phase 3 (attempt 7+):    ESP.restart() as last resort
+    {
+        static unsigned long lastWifiCheck = 0;
+        static uint8_t reconnectAttempts = 0;
+        unsigned long now = millis();
+        unsigned long interval = reconnectAttempts < 3 ? 5000 : 10000;
+
+        if (now - lastWifiCheck > interval) {
+            lastWifiCheck = now;
+            if (WiFi.status() != WL_CONNECTED) {
+                reconnectAttempts++;
+
+                if (reconnectAttempts <= 3) {
+                    // Phase 1: soft reconnect
+                    LOG.print("WiFi disconnected, reconnecting (attempt ");
+                    LOG.print(reconnectAttempts);
+                    LOG.println("/6)...");
+                    WiFi.reconnect();
+                } else if (reconnectAttempts <= 6) {
+                    // Phase 2: full disconnect + begin cycle
+                    LOG.print("WiFi reconnect failed, full reconnect (attempt ");
+                    LOG.print(reconnectAttempts);
+                    LOG.println("/6)...");
+                    WiFi.disconnect(true);
+                    delay(100);
+                    WiFi.mode(WIFI_STA);
+                    WiFi.begin();
+                } else {
+                    // Phase 3: nothing worked, restart
+                    LOG.println("WiFi reconnect failed after 6 attempts, restarting...");
+                    delay(100);
+                    ESP.restart();
+                }
+            } else if (reconnectAttempts > 0) {
+                LOG.print("WiFi reconnected to ");
+                LOG.println(WiFi.SSID());
+                reconnectAttempts = 0;
+            }
+        }
+    }
+    #endif // WIFI_ENABLED
+
     #if MQTT_ENABLED
     g_mqtt->loop();
 
