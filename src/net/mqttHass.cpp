@@ -61,6 +61,34 @@ char* MqttHass::newMessageJson(const Device* device, char* buf) {
                 "}",
                 device->getName(), device->getName(),
                 device->getName(), device->getName());
+    } else if (device->getMode() == SHUTTER || device->getMode() == SHUTTER_BUS) {
+        sprintf(buf,
+                "{"
+                "\"name\":\"Shutter\","
+                "\"device_class\":\"shutter\","
+                "\"cmd_t\":\"~cmnd/COVER\","
+                "\"pl_open\":\"OPEN\","
+                "\"pl_cls\":\"CLOSE\","
+                "\"pl_stop\":\"STOP\","
+                "\"state_topic\":\"~tele/STATE\","
+                "\"state_open\":\"open\","
+                "\"state_closed\":\"closed\","
+                "\"state_stopped\":\"stopped\","
+                "\"val_tpl\":\"{{value_json.STATE}}\","
+                "\"avty_t\":\"~tele/LWT\","
+                "\"pl_avail\":\"Online\","
+                "\"pl_not_avail\":\"Offline\","
+                "\"uniq_id\":\"esp-%s\","
+                "\"device\":{"
+                  "\"name\":\"%s\","
+                  "\"identifiers\":[\"yokis-%s\"],"
+                  "\"model\":\"MVR500ERX\","
+                  "\"mf\":\"Yokis\""
+                "},"
+                "\"~\":\"%s/\""
+                "}",
+                device->getName(), device->getName(),
+                device->getName(), device->getName());
     } else {
         sprintf(buf,
                 "{"
@@ -92,8 +120,39 @@ char* MqttHass::newMessageJson(const Device* device, char* buf) {
 }
 
 char* MqttHass::newPublishTopic(const Device* device, char* buf) {
-    sprintf(buf, "%s/light/%s/config", HASS_PREFIX, device->getName());
+    const char* component;
+    if (device->getMode() == DIMMER) {
+        component = "light";
+    } else if (device->getMode() == SHUTTER || device->getMode() == SHUTTER_BUS) {
+        component = "cover";
+    } else {
+        component = "switch";
+    }
+    sprintf(buf, "%s/%s/%s/config", HASS_PREFIX, component, device->getName());
     return buf;
+}
+
+// Remove stale discovery entries from old component types
+// e.g. a switch that was previously published as a light
+void MqttHass::cleanupOldDiscovery(const Device* device) {
+    char topic[128];
+    const char* components[] = {"light", "switch", "cover"};
+    const char* current;
+
+    if (device->getMode() == DIMMER) {
+        current = "light";
+    } else if (device->getMode() == SHUTTER || device->getMode() == SHUTTER_BUS) {
+        current = "cover";
+    } else {
+        current = "switch";
+    }
+
+    for (uint8_t i = 0; i < 3; i++) {
+        if (strcmp(components[i], current) != 0) {
+            sprintf(topic, "%s/%s/%s/config", HASS_PREFIX, components[i], device->getName());
+            this->publish(topic, "", true);
+        }
+    }
 }
 
 // Publish device to MQTT for HASS discovery
@@ -101,6 +160,9 @@ bool MqttHass::publishDevice(const Device* device) {
     bool ret;
     char topic[128];
     char payload[MQTT_MAX_PACKET_SIZE];
+
+    // Clean up old retained entries under wrong component types
+    cleanupOldDiscovery(device);
 
     newPublishTopic(device, topic);
     newMessageJson(device, payload);
@@ -150,6 +212,19 @@ void MqttHass::notifyPower(const Device* device, DeviceStatus ds) {
     publish(buf, bufPayload, false);
 }
 
+void MqttHass::notifyCover(const Device* device) {
+    char buf[64];
+    char bufPayload[64];
+
+    sprintf(buf, "%s/tele/STATE", device->getName());
+    const char* state;
+    if (device->getStatus() == ON) state = "open";
+    else if (device->getStatus() == PAUSE_SHUTTER) state = "stopped";
+    else state = "closed";
+    sprintf(bufPayload, "{\"STATE\":\"%s\"}", state);
+    publish(buf, bufPayload, false);
+}
+
 void MqttHass::notifyBrightness(const Device* device) {
     char buf[64];
     char bufPayload[64];
@@ -165,8 +240,8 @@ void MqttHass::notifyBrightness(const Device* device) {
 void MqttHass::subscribeDevice(const Device* device) {
     char buf[64];
 
-    if (device->getMode() == ON_OFF || device->getMode() == NO_RCPT) {
-        sprintf(buf, "%s/cmnd/POWER", device->getName());
+    if (device->getMode() == SHUTTER || device->getMode() == SHUTTER_BUS) {
+        sprintf(buf, "%s/cmnd/COVER", device->getName());
         this->subscribe(buf);
     } else if (device->getMode() == DIMMER) {
         sprintf(buf, "%s/cmnd/POWER", device->getName());
@@ -174,6 +249,9 @@ void MqttHass::subscribeDevice(const Device* device) {
         sprintf(buf, "%s/cmnd/BRIGHTNESS", device->getName());
         this->subscribe(buf);
         sprintf(buf, "%s/cmnd/FX", device->getName());
+        this->subscribe(buf);
+    } else {
+        sprintf(buf, "%s/cmnd/POWER", device->getName());
         this->subscribe(buf);
     }
 }
