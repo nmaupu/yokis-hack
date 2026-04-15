@@ -2,6 +2,8 @@
 #include "net/wifi.h"
 #include "globals.h"
 
+extern bool g_apMode;
+
 void setupWifi(String ssid, String password) {
     // Configuration changed
     if (strcmp(WiFi.SSID().c_str(), ssid.c_str()) != 0 ||
@@ -100,10 +102,13 @@ void setupWifiAP() {
     WiFi.waitForConnectResult();
     WiFi.persistent(false);
 
+    g_apMode = true;
+
     LOG.print("WiFi AP mode started. SSID: ");
     LOG.println(ssid);
     LOG.print("YokisHack IP: ");
     LOG.println(WiFi.softAPIP());
+    LOG.println("Captive portal active - connect to AP and a browser should open automatically.");
 }
 
 bool resetWifiConfig() {
