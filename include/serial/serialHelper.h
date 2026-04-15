@@ -24,6 +24,7 @@ class SerialHelper {
     //~SerialHelper();
     void readFromSerial();
     void usage();
+    void printCommand(uint8_t idx);
     bool registerCallback(SerialCallback* callback);
     bool executeCallback(const char*);
     void extractCommand(char* buf);

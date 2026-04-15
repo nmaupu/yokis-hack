@@ -113,18 +113,70 @@ void SerialHelper::extractCommand(char* buf) {
     buf[p] = '\0';
 }
 
+void SerialHelper::printCommand(uint8_t idx) {
+    LOG.print("  ");
+    LOG.print(callbacks[idx]->getCommand());
+    unsigned int nbSpaces =
+        longestCommandLength - strlen(callbacks[idx]->getCommand());
+    for (uint8_t j = 0; j < nbSpaces + 1; j++) LOG.print(" ");
+    LOG.println(callbacks[idx]->getHelp());
+}
+
 void SerialHelper::usage() {
     char buf[64];
     sprintf(buf, PROG_TITLE_FORMAT, PROG_VERSION);
     LOG.println(buf);
-    LOG.println();
 
+    // Define command categories
+    struct Category {
+        const char* name;
+        const char* commands[10];
+    };
+
+    Category categories[] = {
+        {"System",          {"help", "config", "debug", "raw", "poll", "restart", "reboot", NULL}},
+        {"Device Control",  {"pair", "toggle", "on", "off", "pause", "status", "statusAll", "scan", "copy", NULL}},
+        {"Dimmer",          {"dimmem", "dimmax", "dimmid", "dimmin", "dimnil", NULL}},
+        {"Button",          {"press", "pressFor", "release", NULL}},
+        {"Configuration",   {"save", "delete", "clear", "reload", "dConfig", "dConfigFS", "dRestore", NULL}},
+        {"WiFi",            {"wifiConfig", "wifiReconnect", "wifiDiag", "wifiReset", NULL}},
+        {"MQTT",            {"mqttConfig", "mqttDiag", "mqttConfigDelete", NULL}},
+    };
+    uint8_t numCategories = sizeof(categories) / sizeof(categories[0]);
+
+    // Track which commands were printed
+    bool printed[MAX_NUMBER_OF_COMMANDS];
+    for (uint8_t i = 0; i < callbacksIndex; i++) printed[i] = false;
+
+    for (uint8_t c = 0; c < numCategories; c++) {
+        bool headerPrinted = false;
+        for (uint8_t k = 0; categories[c].commands[k] != NULL; k++) {
+            for (uint8_t i = 0; i < callbacksIndex; i++) {
+                if (!printed[i] && strcmp(callbacks[i]->getCommand(), categories[c].commands[k]) == 0) {
+                    if (!headerPrinted) {
+                        LOG.println();
+                        LOG.println(categories[c].name);
+                        headerPrinted = true;
+                    }
+                    printCommand(i);
+                    printed[i] = true;
+                    break;
+                }
+            }
+        }
+    }
+
+    // Print any remaining uncategorized commands
+    bool headerPrinted = false;
     for (uint8_t i = 0; i < callbacksIndex; i++) {
-        LOG.print(callbacks[i]->getCommand());
-        unsigned int nbSpaces =
-            longestCommandLength - strlen(callbacks[i]->getCommand());
-        for (uint8_t j = 0; j < nbSpaces + 1; j++) LOG.print(" ");
-        LOG.println(callbacks[i]->getHelp());
+        if (!printed[i]) {
+            if (!headerPrinted) {
+                LOG.println();
+                LOG.println("Other");
+                headerPrinted = true;
+            }
+            printCommand(i);
+        }
     }
 }
 

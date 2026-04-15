@@ -6,12 +6,14 @@
 #include "RF/pairing.h"
 #include "RF/scanner.h"
 #include "commands/callbacks.h"
+#include "RF/device.h"
 #include "globals.h"
 #include "printf.h"
 #include "serial/serialHelper.h"
 
 #if defined(ESP8266) || defined(ESP32)
 #include <ArduinoOTA.h>
+#include <Updater.h>
 #include <DNSServer.h>
 #include <PubSubClient.h>
 #include <Ticker.h>
@@ -19,8 +21,10 @@
 
 #if defined(ESP8266)
 #include <ESP8266WiFi.h>
+#include <ESP8266mDNS.h>
 #elif defined(ESP32)
 #include <WiFi.h>
+#include <ESPmDNS.h>
 #endif
 
 #if MQTT_ENABLED
@@ -110,6 +114,82 @@ void updateStatusLED() {
     }
 }
 
+// Deferred OTA reboot (set from async handler, executed in main loop)
+volatile bool g_otaRebootPending = false;
+
+// Web-triggered config save (deferred from async handler to main loop)
+volatile bool g_configSaveRequested = false;
+char g_pendingWifiSsid[64] = "";
+char g_pendingWifiPassword[64] = "";
+char g_pendingMqttHost[64] = "";
+uint16_t g_pendingMqttPort = 0;
+char g_pendingMqttUsername[32] = "";
+char g_pendingMqttPassword[32] = "";
+
+void handleDeferredConfigSave() {
+    if (!g_configSaveRequested) return;
+    g_configSaveRequested = false;
+
+    // WiFi: only reconnect if credentials changed
+    if (strlen(g_pendingWifiSsid) > 0) {
+        if (String(g_pendingWifiSsid) != WiFi.SSID() || String(g_pendingWifiPassword) != WiFi.psk()) {
+            setupWifi(String(g_pendingWifiSsid), String(g_pendingWifiPassword));
+        }
+    }
+
+    // MQTT: update if host provided
+    #if MQTT_ENABLED
+    if (strlen(g_pendingMqttHost) > 0 && g_pendingMqttPort > 0) {
+        g_mqtt->setDiscoveryDone(false);
+        g_mqtt->setConnectionInfo(g_pendingMqttHost, g_pendingMqttPort, g_pendingMqttUsername, g_pendingMqttPassword);
+    }
+    #endif
+}
+
+// Web-triggered pairing state machine
+enum PairingState { PAIRING_IDLE, PAIRING_REQUESTED, PAIRING_IN_PROGRESS, PAIRING_SUCCESS, PAIRING_FAILED };
+volatile PairingState g_pairingState = PAIRING_IDLE;
+String g_pairingSaveName = "";
+String g_pairingMode = "";
+String g_pairingInfo = "";
+
+void handleWebPairing() {
+    if (g_pairingState != PAIRING_REQUESTED) return;
+
+    g_pairingState = PAIRING_IN_PROGRESS;
+    g_pairingInfo = "";
+
+    // Run the pairing (blocks up to 30s)
+    bool res = pairingCallback(NULL);
+
+    if (res) {
+        // Build info string from g_currentDevice
+        char buf[128];
+        sprintf(buf, "%s (ch:%d, mode:%s)",
+                g_currentDevice->getName(),
+                g_currentDevice->getChannel(),
+                Device::getModeAsString(g_currentDevice->getMode()));
+        g_pairingInfo = buf;
+
+        // Auto-save if a name was provided
+        if (g_pairingSaveName.length() > 0) {
+            g_currentDevice->setName(g_pairingSaveName.c_str());
+            if (g_pairingMode.length() > 0) {
+                g_currentDevice->setMode(g_pairingMode.c_str());
+            }
+            g_currentDevice->saveToLittleFS();
+            g_currentDevice->setName(CURRENT_DEVICE_DEFAULT_NAME);
+            reloadConfig(NULL);
+            g_pairingInfo += " - saved as " + g_pairingSaveName;
+        }
+
+        g_pairingState = PAIRING_SUCCESS;
+    } else {
+        g_pairingInfo = "Timeout - no device responded within 30s";
+        g_pairingState = PAIRING_FAILED;
+    }
+}
+
 // polling
 void pollForStatus(Device* device);
 
@@ -168,6 +248,26 @@ void setup() {
         }
         #endif
 
+        // mDNS: first device yokishack.local, others yokishack2.local etc.
+        // Uses last byte of MAC to derive a stable device number
+        if (WiFi.status() == WL_CONNECTED) {
+            uint8_t mac[6];
+            WiFi.macAddress(mac);
+            uint8_t devNum = (mac[5] % 9);  // 0-8
+            String mdnsName = "yokishack";
+            if (devNum > 0) {
+                mdnsName += String(devNum + 1);  // yokishack2 .. yokishack9
+            }
+            if (MDNS.begin(mdnsName.c_str())) {
+                MDNS.addService("http", "tcp", 80);
+                LOG.print("mDNS started: http://");
+                LOG.print(mdnsName);
+                LOG.println(".local");
+            } else {
+                LOG.println("mDNS failed to start");
+            }
+        }
+
         #if MQTT_ENABLED
             g_mqtt = new MqttHass(espClient);
             g_mqtt->setCallback(mqttCallback);
@@ -221,8 +321,17 @@ void setup() {
 
 void loop() {
 #if defined(ESP8266) || defined(ESP32)
+    // Deferred OTA reboot — safe to call delay/restart from main loop
+    if (g_otaRebootPending) {
+        delay(500);
+        ESP.restart();
+    }
+
     LOG.handle(); // telnetspy handling
     ArduinoOTA.handle();
+    #if defined(ESP8266)
+    MDNS.update();
+    #endif
     updateStatusLED();
 
     #if WIFI_ENABLED && WEBSERVER_ENABLED
@@ -236,7 +345,7 @@ void loop() {
     // Phase 1 (attempts 1-3):  WiFi.reconnect() every 5s
     // Phase 2 (attempts 4-6):  Full disconnect + begin cycle every 10s
     // Phase 3 (attempt 7+):    ESP.restart() as last resort
-    {
+    if (!Update.isRunning()) {
         static unsigned long lastWifiCheck = 0;
         static uint8_t reconnectAttempts = 0;
         unsigned long now = millis();
@@ -278,6 +387,7 @@ void loop() {
     #endif // WIFI_ENABLED
 
     #if MQTT_ENABLED
+    if (!Update.isRunning()) {
     g_mqtt->loop();
 
     if (g_mqtt->connected() && !g_mqtt->isDiscoveryDone()) {
@@ -311,7 +421,14 @@ void loop() {
         // Disconnected, force discovery again next time
         g_mqtt->setDiscoveryDone(false);
     }
+    } // !Update.isRunning()
 #endif // MQTT_ENABLED
+
+    if (!Update.isRunning()) {
+        handleDeferredConfigSave();
+        handleWebPairing();
+    }
+
 #endif // ESP8266 || ESP32
     g_serial->readFromSerial();
     delay(1);
