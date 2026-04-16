@@ -81,13 +81,8 @@ void Mqtt::clearSubscriptions() {
 
 // force=false by default
 bool Mqtt::reconnect(bool force) {
-    // No configuration available
-    if (this->MqttConfig::isEmpty()) {
-        return false;
-    }
-
-    // Don't attempt MQTT if WiFi is not connected
-    if (WiFi.status() != WL_CONNECTED) {
+    // No configuration available or WiFi not connected
+    if (this->MqttConfig::isEmpty() || WiFi.status() != WL_CONNECTED) {
         return false;
     }
 
