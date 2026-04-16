@@ -28,6 +28,7 @@ class MqttHass : public Mqtt {
     MqttHass(WiFiClient&, const char*, const uint16_t, const char*, const char*);
     bool isDiscoveryDone();
     void setDiscoveryDone(bool);
+    void cleanupOldDiscovery(const Device*);
     bool publishDevice(const Device*);
     void subscribeDevice(const Device*);
     void notifyAvailability(const Device*, const char*);
@@ -35,6 +36,7 @@ class MqttHass : public Mqtt {
     void notifyOffline(const Device*);
     void notifyPower(const Device*);
     void notifyPower(const Device*, DeviceStatus);
+    void notifyCover(const Device*);
     void notifyBrightness(const Device* device);
 };
 

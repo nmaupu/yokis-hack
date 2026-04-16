@@ -387,8 +387,7 @@ int Device::loadFromLittleFS(Device** devices, const unsigned int size) {
 
     File f = LittleFS.open(LITTLEFS_CONFIG_FILENAME, "r");
     if (!f) {
-        LOG.print(LITTLEFS_CONFIG_FILENAME);
-        LOG.println(" - File open failed");
+        // Normal on first boot — no devices saved yet
         return 0;
     }
 
