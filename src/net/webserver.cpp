@@ -1,6 +1,7 @@
 #if WIFI_ENABLED && (defined(ESP8266) || defined(ESP32)) && WEBSERVER_ENABLED
 #include "net/webserver.h"
 #include "globals.h"
+#include "RF/device.h"
 
 WebServer::WebServer(uint16_t port) : AsyncWebServer(port) {
     this->on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
@@ -80,6 +81,69 @@ WebServer::WebServer(uint16_t port) : AsyncWebServer(port) {
         #endif  // #if MQTT_ENABLED && !defined(MQTT_IP)
 
         request->redirect("/?message=Configuration saved successfully");
+    });
+
+    // JSON API for status dashboard
+    this->on("/api/status", HTTP_GET, [](AsyncWebServerRequest* request) {
+        String json = "{";
+
+        // WiFi status
+        json += "\"wifi\":{";
+        json += "\"connected\":";
+        json += (WiFi.status() == WL_CONNECTED) ? "true" : "false";
+        json += ",\"ssid\":\"" + WiFi.SSID() + "\"";
+        json += ",\"ip\":\"" + WiFi.localIP().toString() + "\"";
+        json += ",\"rssi\":" + String(WiFi.RSSI());
+        json += "}";
+
+        // MQTT status
+        #if MQTT_ENABLED
+        json += ",\"mqtt\":{";
+        json += "\"connected\":";
+        json += g_mqtt->connected() ? "true" : "false";
+        json += ",\"configured\":";
+        json += g_mqtt->MqttConfig::isEmpty() ? "false" : "true";
+        json += ",\"host\":\"";
+        json += g_mqtt->getHost();
+        json += "\",\"port\":";
+        json += String(g_mqtt->getPort());
+        json += "}";
+        #else
+        json += ",\"mqtt\":{\"connected\":false,\"configured\":false,\"host\":\"\",\"port\":0}";
+        #endif
+
+        // Uptime & heap
+        json += ",\"uptime\":" + String(millis() / 1000);
+        #if defined(ESP8266)
+        json += ",\"heap\":" + String(ESP.getFreeHeap());
+        #elif defined(ESP32)
+        json += ",\"heap\":" + String(ESP.getFreeHeap());
+        #endif
+
+        // Devices
+        json += ",\"devices\":[";
+        for (uint8_t i = 0; i < g_nb_devices; i++) {
+            if (g_devices[i] != NULL) {
+                if (i > 0) json += ",";
+                json += "{\"name\":\"";
+                json += g_devices[i]->getName();
+                json += "\",\"mode\":\"";
+                json += Device::getModeAsString(g_devices[i]->getMode());
+                json += "\",\"status\":\"";
+                json += Device::getStatusAsString(g_devices[i]->getStatus());
+                json += "\",\"availability\":\"";
+                json += Device::getAvailabilityAsString(g_devices[i]->getAvailability());
+                json += "\"}";
+            }
+        }
+        json += "]}";
+
+        request->send(200, "application/json", json);
+    });
+
+    // Captive portal: redirect all unknown requests to the config page
+    this->onNotFound([](AsyncWebServerRequest* request) {
+        request->redirect("/");
     });
 }
 

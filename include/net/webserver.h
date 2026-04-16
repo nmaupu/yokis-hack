@@ -17,8 +17,9 @@ const char html_config_form[] PROGMEM = R"rawliteral(
 <html lang="en">
     <head>
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Yokis-Hack configuration page</title>
+        <title>Yokis-Hack</title>
         <style>
+            body { font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto; padding: 10px; }
             input[type=text], input[type=password], select {
                 width: 100%%;
                 padding: 12px 20px;
@@ -28,7 +29,6 @@ const char html_config_form[] PROGMEM = R"rawliteral(
                 border-radius: 4px;
                 box-sizing: border-box;
             }
-
             input[type=submit] {
                 width: 100%%;
                 background-color: #4CAF50;
@@ -39,18 +39,13 @@ const char html_config_form[] PROGMEM = R"rawliteral(
                 border-radius: 4px;
                 cursor: pointer;
             }
-
-            input[type=submit]:hover {
-                background-color: #45a049;
-            }
-
-            div {
+            input[type=submit]:hover { background-color: #45a049; }
+            .section {
                 border-radius: 5px;
                 background-color: #f2f2f2;
                 padding: 20px;
+                margin-bottom: 15px;
             }
-
-             /* The alert message box */
             .alert {
                 padding: 20px;
                 background-color: #f44336;
@@ -59,12 +54,9 @@ const char html_config_form[] PROGMEM = R"rawliteral(
                 transition: opacity 0.6s;
                 margin-bottom: 15px;
             }
-
-            .alert.success {background-color: #4CAF50;}
-            .alert.info {background-color: #2196F3;}
-            .alert.warning {background-color: #ff9800;}
-
-            /* The close button */
+            .alert.success { background-color: #4CAF50; }
+            .alert.info { background-color: #2196F3; }
+            .alert.warning { background-color: #ff9800; }
             .closebtn {
                 margin-left: 15px;
                 color: white;
@@ -75,11 +67,26 @@ const char html_config_form[] PROGMEM = R"rawliteral(
                 cursor: pointer;
                 transition: 0.3s;
             }
-
-            /* When moving the mouse over the close button */
-            .closebtn:hover {
-                color: black;
+            .closebtn:hover { color: black; }
+            .status-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #ddd; }
+            .status-row:last-child { border-bottom: none; }
+            .status-label { font-weight: bold; }
+            .badge {
+                display: inline-block;
+                padding: 2px 10px;
+                border-radius: 12px;
+                color: white;
+                font-size: 0.85em;
             }
+            .badge-ok { background-color: #4CAF50; }
+            .badge-err { background-color: #f44336; }
+            .badge-warn { background-color: #ff9800; }
+            table { width: 100%%; border-collapse: collapse; }
+            th, td { text-align: left; padding: 8px; border-bottom: 1px solid #ddd; }
+            th { background-color: #4CAF50; color: white; }
+            tr:hover { background-color: #e9e9e9; }
+            .signal-bar { display: inline-block; width: 4px; margin-right: 1px; background: #ccc; vertical-align: bottom; }
+            .signal-bar.active { background: #4CAF50; }
         </style>
         <script>
             function getMessageBox() {
@@ -89,14 +96,89 @@ const char html_config_form[] PROGMEM = R"rawliteral(
                     document.getElementById("message").innerHTML = "<div class=\"alert success\"><span class=\"closebtn\" onclick=\"this.parentElement.style.display='none';\">&times;</span>" + message + "</div>";
                 }
             }
+            function signalBars(rssi) {
+                var bars = 0;
+                if (rssi > -50) bars = 4;
+                else if (rssi > -60) bars = 3;
+                else if (rssi > -70) bars = 2;
+                else if (rssi > -80) bars = 1;
+                var html = '';
+                for (var i = 1; i <= 4; i++) {
+                    html += '<span class="signal-bar' + (i <= bars ? ' active' : '') + '" style="height:' + (i*5) + 'px"></span>';
+                }
+                return html + ' ' + rssi + ' dBm';
+            }
+            function refreshStatus() {
+                fetch('/api/status').then(function(r){return r.json()}).then(function(d) {
+                    var ws = document.getElementById('wifi-status');
+                    if (d.wifi.connected) {
+                        ws.innerHTML = '<span class="badge badge-ok">Connected</span> to ' + d.wifi.ssid;
+                        document.getElementById('wifi-ip').innerHTML = d.wifi.ip;
+                        document.getElementById('wifi-rssi').innerHTML = signalBars(d.wifi.rssi);
+                    } else {
+                        ws.innerHTML = '<span class="badge badge-err">Disconnected</span>';
+                        document.getElementById('wifi-ip').innerHTML = '-';
+                        document.getElementById('wifi-rssi').innerHTML = '-';
+                    }
+                    var ms = document.getElementById('mqtt-status');
+                    if (d.mqtt.connected) {
+                        ms.innerHTML = '<span class="badge badge-ok">Connected</span> to ' + d.mqtt.host + ':' + d.mqtt.port;
+                    } else if (d.mqtt.configured) {
+                        ms.innerHTML = '<span class="badge badge-err">Disconnected</span>';
+                    } else {
+                        ms.innerHTML = '<span class="badge badge-warn">Not configured</span>';
+                    }
+                    document.getElementById('uptime').innerHTML = formatUptime(d.uptime);
+                    document.getElementById('heap').innerHTML = d.heap + ' bytes';
+                    var dt = document.getElementById('device-tbody');
+                    if (d.devices.length === 0) {
+                        dt.innerHTML = '<tr><td colspan="4" style="text-align:center">No devices paired</td></tr>';
+                    } else {
+                        var h = '';
+                        for (var i = 0; i < d.devices.length; i++) {
+                            var dev = d.devices[i];
+                            var avail = dev.availability === 'Online'
+                                ? '<span class="badge badge-ok">Online</span>'
+                                : '<span class="badge badge-err">Offline</span>';
+                            h += '<tr><td>' + dev.name + '</td><td>' + dev.mode + '</td><td>' + dev.status + '</td><td>' + avail + '</td></tr>';
+                        }
+                        dt.innerHTML = h;
+                    }
+                }).catch(function(){});
+            }
+            function formatUptime(s) {
+                var d = Math.floor(s / 86400);
+                var h = Math.floor((s %% 86400) / 3600);
+                var m = Math.floor((s %% 3600) / 60);
+                return (d > 0 ? d + 'd ' : '') + h + 'h ' + m + 'm';
+            }
+            window.onload = function() { getMessageBox(); refreshStatus(); setInterval(refreshStatus, 5000); };
         </script>
     </head>
-    <body onload="getMessageBox()">
-        <h1>Yokis-Hack configuration page</h1>
+    <body>
+        <h1>Yokis-Hack</h1>
 
         <div id="message"></div>
 
-        <div>
+        <div class="section">
+            <h2>Status</h2>
+            <div class="status-row"><span class="status-label">WiFi:</span><span id="wifi-status">...</span></div>
+            <div class="status-row"><span class="status-label">IP:</span><span id="wifi-ip">...</span></div>
+            <div class="status-row"><span class="status-label">Signal:</span><span id="wifi-rssi">...</span></div>
+            <div class="status-row"><span class="status-label">MQTT:</span><span id="mqtt-status">...</span></div>
+            <div class="status-row"><span class="status-label">Uptime:</span><span id="uptime">...</span></div>
+            <div class="status-row"><span class="status-label">Free memory:</span><span id="heap">...</span></div>
+        </div>
+
+        <div class="section">
+            <h2>Devices</h2>
+            <table>
+                <thead><tr><th>Name</th><th>Type</th><th>Status</th><th>Availability</th></tr></thead>
+                <tbody id="device-tbody"><tr><td colspan="4" style="text-align:center">Loading...</td></tr></tbody>
+            </table>
+        </div>
+
+        <div class="section">
         <form action="/save_config">
 
         <h2>WiFi</h2>
